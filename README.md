@@ -1,48 +1,46 @@
 # mdk
 
-The native MD Kanban. A kanban board for watching what your AI coding agents are doing: every card is a markdown file in your project folder, agents move cards by editing files, and the board updates live.
+A kanban board where every card is a markdown file. Your AI coding agent edits the file, and the card moves on your screen within half a second.
 
-mdk is a Rust rebuild of [MD Kanban](https://github.com/Abdulkader-Safi/md-kanban) (Electron) on GPUI and gpui-kit. It reads and writes the same card files, so both apps work on the same folders.
+mdk is free and open source (MIT). It runs on macOS, Windows and Linux, with no account and no network requests.
 
-## Status
+[Download the latest release](https://github.com/Abdulkader-Safi/MDK/releases/latest) · [Website](https://abdulkader-safi.github.io/MDK/)
 
-Feature-complete against the build spec in `resources/06-build-spec.md`, and tested without a window on macOS, Windows and Linux in CI. The main screens have been looked at in both themes. Still open: checking it by hand next to the Electron app, and publishing a release, so for now you build it from source. `PROGRESS.md` lists every open check.
+![The mdk board in dark mode, with five columns of cards from Backlog to Done](docs/img/board-dark.webp)
 
-## Run it
+## Install
 
-You need Rust stable, 1.89 or newer (`rustup update stable`).
+Download the file for your system from the [latest release](https://github.com/Abdulkader-Safi/MDK/releases/latest):
 
-```sh
-git clone https://github.com/Abdulkader-Safi/md-kanban-v2 mdk
-cd mdk
-cargo run --release -p mdk
-```
+- macOS 13 or later, Apple silicon: the `.dmg`. Drag mdk to Applications.
+- Windows x64: the `-setup.exe`. It installs for your user only, so it needs no admin rights.
+- Linux x86_64: the `.AppImage`. Run `chmod +x mdk_*.AppImage`, then open it.
 
-The first build compiles GPUI and takes a few minutes. On Linux, install GPUI's system libraries first. On Ubuntu:
+The builds are not code-signed yet, so the first launch needs one extra click:
 
-```sh
-sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-dev libxcb1-dev \
-  libwayland-dev libfontconfig1-dev libfreetype6-dev
-```
-
-Development happens on macOS. On Windows and Linux the tests pass in CI, but the window has not been used by hand yet.
+- macOS blocks the first launch. Open System Settings, Privacy & Security, scroll down and click "Open Anyway" next to mdk. Or run `xattr -dr com.apple.quarantine /Applications/mdk.app` once.
+- Windows SmartScreen says it protected your PC. Click "More info", then "Run anyway".
 
 ## First steps
 
-1. Click "Create sample project" and pick where to put it. mdk writes a `mdk-sample` folder with seven cards that show every feature.
-2. Or click "Connect folder" and pick a folder of your own. Every `.md` file in it is a card. Pick a tasks folder, not a repo root, or the README becomes a card too.
-3. Tell your agent: "read AGENTS.md and work through the To Do cards". Watch a card move without touching mdk.
+1. Click "Try the sample project" and pick where to put it. mdk writes a `mdk-sample` folder with seven cards that show every feature.
+2. Or click "Add project" and pick a folder of your own. Every `.md` file in it becomes a card. Pick a tasks folder, not a repo root, or your README becomes a card too.
+3. Tell your agent: "read AGENTS.md and work through the To Do cards". Then watch the cards move.
+
+Right-click a project in the sidebar to rescan it or remove it from the list. Removing never deletes files.
 
 ## What it does
 
-- Five columns: Backlog, To Do, In Progress, Review, Done. Drag cards between them, use the "⋯" menu, or use the keyboard.
-- Live updates. A native file watcher shows an agent's edit within half a second. No polling.
-- New cards in one line: `Fix login p1 #backend @safi due:friday`.
-- A card editor with a formatting toolbar, autosave, and optional Vim keys. If an agent changes a file while you have unsaved edits, mdk asks which version to keep.
+- Five columns: Backlog, To Do, In Progress, Review and Done. Drag cards between them, use the "..." menu on a card, or use the keyboard.
+- Live updates from a native file watcher. An agent's edit shows up within half a second, and mdk never polls the folder.
+- New cards in one line: `Fix login p1 #backend @safi due:friday` sets the priority, label, assignee and due date.
+- A card editor that saves as you type, with a formatting toolbar and optional Vim keys. If an agent saves a file while you have unsaved edits in it, mdk asks which version to keep.
 - A preview with tables, task lists, code, maths (`$x^2$`), Mermaid diagrams, callouts, `==highlights==`, `[[wikilinks]]` and images from the project folder.
-- Filters by text, priority, assignee, label and due date, saved as views per project. A sortable list view.
+- Filters by text, priority, assignee, label and due date, saved as views per project, plus a sortable list view.
 - A command palette, undo and redo for moves, creates, deletes and archives, and "Copy AI prompt" to hand a card to an agent.
 - No account, no network requests, no telemetry. mdk writes nothing in your folders except card files.
+
+mdk is a Rust rebuild of [MD Kanban](https://github.com/Abdulkader-Safi/md-kanban), the Electron app, on GPUI and gpui-kit. It reads and writes the same card files, so both apps can open the same folder.
 
 ## Keys
 
@@ -100,13 +98,13 @@ mdk never runs an agent. An agent needs file access to the folder and nothing el
 
 Measured on an M1 MacBook, 12 October 2026: mdk 0.1.0 against the Electron app's existing build, with `scripts/bench.sh`.
 
-| | mdk | Electron MD Kanban |
-| --- | --- | --- |
-| Download (`.dmg`) | 11 MB | 196 MB |
-| App on disk | 28 MB | 603 MB |
-| Memory after 10 minutes idle, all processes | 67 MB | 250 MB |
-| Launch to first window, warm (median of 5) | 515 ms | 521 ms |
-| Launch to first window, first run after install | 1.5 s | 3.9 s |
+|                                                 | mdk    | Electron MD Kanban |
+| ----------------------------------------------- | ------ | ------------------ |
+| Download (`.dmg`)                               | 11 MB  | 196 MB             |
+| App on disk                                     | 28 MB  | 603 MB             |
+| Memory after 10 minutes idle, all processes     | 67 MB  | 250 MB             |
+| Launch to first window, warm (median of 5)      | 515 ms | 521 ms             |
+| Launch to first window, first run after install | 1.5 s  | 3.9 s              |
 
 The memory and launch rows were taken with no project connected in either app, because the Electron build on this machine has no saved projects. They are not the 169-card comparison the spec asks for.
 
@@ -122,6 +120,25 @@ Everything mdk remembers is in one `config.json` in the OS config folder: `~/Lib
 - `MDK_LOG`: log level, `info` by default. `debug` says more.
 - `MDK_NO_WATCH=1`: turn the file watcher off.
 - `MDK_SHOW`: open screens at launch, for screenshots and manual checks. For example `MDK_SHOW="card=writing/preview-showcase-2026-10-11.md;preview"`. Words: `card=<path>`, `preview`, `markdown`, `list`, `board`, `palette`, `new`, `settings`, `light`, `dark`, `vim`, `project=<name>`.
+
+## Build from source
+
+You need Rust stable, 1.89 or newer (`rustup update stable`).
+
+```sh
+git clone https://github.com/Abdulkader-Safi/MDK mdk
+cd mdk
+cargo run --release -p mdk
+```
+
+The first build compiles GPUI and takes a few minutes. On Linux, install GPUI's system libraries first. On Ubuntu:
+
+```sh
+sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-dev libxcb1-dev \
+  libwayland-dev libfontconfig1-dev libfreetype6-dev
+```
+
+mdk is used daily on macOS. The Windows and Linux builds pass the same tests in CI on every push, and the Windows app has had a first hands-on run.
 
 ## Build a release
 
@@ -141,15 +158,11 @@ ditto dist/mdk.app /Applications/mdk.app
 
 This makes a `.app` and `.dmg` on macOS, an NSIS installer on Windows and an AppImage on Linux, in `dist/`. Pushing a `v*` tag runs the same steps on all three in GitHub Actions and attaches the results to a GitHub release.
 
-To publish a release, bump `version` in `Cargo.toml` and `Packager.toml`, commit, then `git tag v0.1.0 && git push origin v0.1.0`.
+To publish a release, bump `version` in `Cargo.toml` and `Packager.toml`, commit, then tag it: `git tag v0.1.4 && git push origin v0.1.4`.
 
 The app icon comes from `crates/mdk/assets/app/app-icon.svg`. After editing it, run `scripts/app-icon.sh` to rebuild the `.icns`, `.ico` and `.png`.
 
-Builds are not notarised (the macOS app has an ad-hoc signature). When you open one:
-
-- macOS blocks the first launch. Open System Settings, Privacy & Security, scroll down and click "Open Anyway" next to mdk. Or run `xattr -dr com.apple.quarantine /Applications/mdk.app` once.
-- Windows SmartScreen says it protected your PC. Click "More info", then "Run anyway".
-- Linux: `chmod +x mdk_*.AppImage`, then run it.
+The site in `docs/` is the GitHub Pages landing page. Its screenshots come from the app.
 
 ## Tests
 

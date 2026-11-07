@@ -58,7 +58,7 @@ Not done: no screenshot check of the new UI. The screen was locked, so window ca
 
 - The spec files live in `resources/`, where Safi put them. The build spec calls the folder `docs/spec/`. Not moved.
 - The Electron source is read from the local clone at `../MD-Kanban` (commit `edebd29`).
-- The repo is `github.com/Abdulkader-Safi/md-kanban-v2`. The spec names it `mdk`.
+- The repo is `github.com/Abdulkader-Safi/MDK` (renamed from `md-kanban-v2` on 2026-11-07). The spec names it `mdk`.
 - Safi, 2026-10-11: settle open items by best practice and keep building, since only he uses the tool for now. So:
   - Editor headings are bold and coloured, not bigger. FR-MDE-01 is amended.
   - Wikilinks and `==highlight==` use the source rewrite from the preview spike. A long highlight wraps as a unit. Worth a gpui-kit patch later.
