@@ -239,6 +239,16 @@ pub enum Resize {
     Sheet,
 }
 
+/// The payload of a drag on the line between projects and work folders.
+#[derive(Clone, Copy)]
+pub struct SplitProjects;
+
+impl Render for SplitProjects {
+    fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
+        Empty
+    }
+}
+
 impl Render for Resize {
     fn render(&mut self, _: &mut Window, _: &mut Context<Self>) -> impl IntoElement {
         Empty
@@ -307,6 +317,8 @@ pub struct Mdk {
     pub grabbed: Option<Grabbed>,
     /// The card whose move menu is open.
     pub(crate) menu_for: Option<CardKey>,
+    /// The project whose right-click menu is open, and where the click was.
+    pub(crate) project_menu: Option<(ProjectId, Point<Pixels>)>,
     /// While dragging: the card in the air and where it would land, as (column, row).
     pub(crate) dragging: Option<CardKey>,
     pub slot: Option<(usize, usize)>,
@@ -449,6 +461,7 @@ impl Mdk {
             focused: None,
             grabbed: None,
             menu_for: None,
+            project_menu: None,
             dragging: None,
             slot: None,
             column_scroll: AutoScroll::default(),
@@ -754,7 +767,7 @@ impl Mdk {
     }
 
     /// Write the config 300 ms from now. A newer change restarts the wait.
-    fn save_soon(&mut self, cx: &mut Context<Self>) {
+    pub(crate) fn save_soon(&mut self, cx: &mut Context<Self>) {
         self.save_task = Some(cx.spawn(async move |this, cx| {
             cx.background_executor()
                 .timer(Duration::from_millis(300))
@@ -1171,6 +1184,7 @@ impl Mdk {
             || self.view_name.take().is_some()
             || self.filter_menu.take().is_some()
             || self.menu_for.take().is_some()
+            || self.project_menu.take().is_some()
     }
 
     // ---- filters and saved views ------------------------------------------------------------

@@ -94,6 +94,7 @@ pub struct WindowState {
 }
 
 pub const SIDEBAR_WIDTH: f32 = 240.;
+pub const PROJECTS_HEIGHT: f32 = 240.;
 pub const EDITOR_WIDTH: f32 = 672.;
 
 /// `"all"` in the file means no project or work folder is selected.
@@ -113,6 +114,11 @@ pub struct Prefs {
     pub editor_expanded: bool,
     /// Dragged widths, in pixels.
     pub sidebar_width: f32,
+    /// Height of the sidebar's project list when work folders show below it.
+    pub projects_height: f32,
+    /// Sidebar sections folded down to their heading.
+    pub projects_collapsed: bool,
+    pub folders_collapsed: bool,
     pub editor_width: f32,
     /// Saved filter views per project id, or `"all"` for All projects.
     pub saved_views: BTreeMap<String, Vec<SavedView>>,
@@ -133,6 +139,9 @@ impl Default for Prefs {
             editor_tab: EditorTab::Markdown,
             editor_expanded: false,
             sidebar_width: SIDEBAR_WIDTH,
+            projects_height: PROJECTS_HEIGHT,
+            projects_collapsed: false,
+            folders_collapsed: false,
             editor_width: EDITOR_WIDTH,
             saved_views: BTreeMap::new(),
             window: None,

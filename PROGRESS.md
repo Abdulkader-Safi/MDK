@@ -3,6 +3,12 @@
 Milestone log for mdk. The build spec is `resources/06-build-spec.md`.
 
 
+## Sidebar layout (2026-11-07)
+
+- The brand header and the settings footer stay put. Projects and work folders each scroll on their own, so the footer sits at the bottom even with one project.
+- A line between the two lists drags to resize them. The project list height is saved in `config.json` as `projects_height`. A click on a heading folds that section, and the other list takes the room.
+- Rescan, Locate folder and Remove moved from under the selected project to a right-click menu on any project row. A missing folder still shows its red line under the row.
+
 ## First Windows run (2026-10-28)
 
 - Release builds use the Windows GUI subsystem, so no console window opens beside mdk. Closing that console used to kill the app. Debug builds keep the console. Logs were already in `mdk.log`.

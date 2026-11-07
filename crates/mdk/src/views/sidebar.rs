@@ -1,7 +1,7 @@
 //! The left sidebar: the brand, projects, work folders, and the refresh toggles.
 
 use super::{Colors, label, toggle};
-use crate::app::Mdk;
+use crate::app::{Mdk, SplitProjects};
 use crate::board::ProjectStatus;
 use crate::theme::{icon, status_color};
 use gpui_kit::component::{ActiveTheme, Icon};
@@ -40,8 +40,8 @@ fn row_icon(name: &'static str, selected: bool, c: Colors) -> Icon {
         .text_color(if selected { c.link } else { c.muted_fg })
 }
 
-/// A small text action under the selected project. `hover` is its colour under the pointer.
-fn link(
+/// One line in the project's right-click menu. `hover` is its colour under the pointer.
+fn menu_item(
     id: &'static str,
     icon_name: &'static str,
     text: &'static str,
@@ -52,13 +52,46 @@ fn link(
         .id(id)
         .flex()
         .items_center()
-        .gap_1()
-        .text_size(px(11.))
-        .text_color(c.muted_fg)
+        .gap_2()
+        .px_2()
+        .py_1p5()
+        .text_xs()
+        .text_color(c.fg)
         .cursor_pointer()
-        .hover(|s| s.text_color(hover))
-        .child(icon(icon_name).size_3())
+        .occlude()
+        .hover(|s| s.bg(c.accent).text_color(hover))
+        .child(icon(icon_name).size_3p5())
         .child(text)
+}
+
+/// A section heading. A click folds the section to its heading or opens it again.
+fn heading(
+    id: &'static str,
+    text: &'static str,
+    collapsed: bool,
+    c: Colors,
+    cx: &App,
+) -> Stateful<Div> {
+    div()
+        .id(id)
+        .flex()
+        .flex_shrink_0()
+        .items_center()
+        .gap_1()
+        .px_4()
+        .pt_4()
+        .pb_1p5()
+        .cursor_pointer()
+        .child(label(text, c, cx))
+        .child(
+            icon(if collapsed {
+                "chevron-right"
+            } else {
+                "chevron-down"
+            })
+            .size_3()
+            .text_color(c.muted_fg),
+        )
 }
 
 impl Mdk {
@@ -76,7 +109,7 @@ impl Mdk {
                 ProjectStatus::Missing => Some("Folder not found".to_string()),
                 ProjectStatus::Unreadable(why) => Some(format!("Can't read folder: {why}")),
             };
-            let (select, rescan, remove, locate) = (id.clone(), id.clone(), id.clone(), id.clone());
+            let (select, menu) = (id.clone(), id.clone());
 
             div()
                 .flex()
@@ -98,7 +131,14 @@ impl Mdk {
                         )
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.select_project(Some(select.clone()), cx)
-                        })),
+                        }))
+                        .on_mouse_down(
+                            MouseButton::Right,
+                            cx.listener(move |this, ev: &MouseDownEvent, _, cx| {
+                                this.project_menu = Some((menu.clone(), ev.position));
+                                cx.notify();
+                            }),
+                        ),
                 )
                 .when_some(problem, |d, problem| {
                     d.child(
@@ -108,37 +148,6 @@ impl Mdk {
                             .text_size(px(11.))
                             .text_color(c.danger)
                             .child(problem),
-                    )
-                })
-                .when(is_selected, |d| {
-                    d.child(
-                        div()
-                            .flex()
-                            .gap_3()
-                            .px_4()
-                            .py_1()
-                            .when(ok, |d| {
-                                d.child(
-                                    link("project-rescan", "refresh", "rescan", c.fg, c).on_click(
-                                        cx.listener(move |this, _, _, cx| this.rescan(&rescan, cx)),
-                                    ),
-                                )
-                            })
-                            .when(!ok, |d| {
-                                d.child(
-                                    link("project-locate", "folder-open", "Locate folder", c.fg, c)
-                                        .on_click(cx.listener(move |this, _, _, cx| {
-                                            this.locate_folder(locate.clone(), cx)
-                                        })),
-                                )
-                            })
-                            .child(
-                                link("project-remove", "plug-off", "remove", c.danger, c).on_click(
-                                    cx.listener(move |this, _, _, cx| {
-                                        this.remove_project(&remove, cx)
-                                    }),
-                                ),
-                            ),
                     )
                 })
         });
@@ -171,6 +180,12 @@ impl Mdk {
                 .child(switch)
         };
         let watching = self.prefs.auto_refresh;
+        let projects_open = !self.prefs.projects_collapsed;
+        let has_folders = !workspaces.is_empty();
+        let folders_open = has_folders && !self.prefs.folders_collapsed;
+        // With both lists open the project list keeps its dragged height; otherwise the
+        // open list takes the room. Each list scrolls on its own.
+        let split = projects_open && folders_open;
 
         div()
             .id("sidebar")
@@ -179,7 +194,6 @@ impl Mdk {
             .flex_shrink_0()
             .w(px(self.prefs.sidebar_width))
             .h_full()
-            .overflow_y_scroll()
             .bg(c.sidebar)
             .border_r_1()
             .border_color(c.border)
@@ -209,25 +223,95 @@ impl Mdk {
                             .child(env!("CARGO_PKG_VERSION")),
                     ),
             )
-            .child(label("PROJECTS", c, cx).px_4().pt_4().pb_1p5())
             .child(
-                row("all-projects", selected.is_none(), c)
-                    .child(row_icon("folders", selected.is_none(), c))
-                    .child("All projects")
-                    .on_click(cx.listener(|this, _, _, cx| this.select_project(None, cx))),
+                heading("projects-heading", "PROJECTS", !projects_open, c, cx).on_click(
+                    cx.listener(|this, _, _, cx| {
+                        this.prefs.projects_collapsed = !this.prefs.projects_collapsed;
+                        this.save_soon(cx);
+                        cx.notify();
+                    }),
+                ),
             )
-            .children(projects)
-            .child(
-                row("connect", false, c)
-                    .child(icon("plus").size_4())
-                    .child("Add project")
-                    .on_click(cx.listener(|this, _, _, cx| this.connect_folder(cx))),
-            )
-            .when(!workspaces.is_empty(), |d| {
-                d.child(label("WORK FOLDERS", c, cx).px_4().pt_4().pb_1p5())
-                    .child(div().flex().flex_col().children(folders))
+            .when(projects_open, |d| {
+                d.child(
+                    div()
+                        .id("projects-list")
+                        .flex()
+                        .flex_col()
+                        .min_h(px(60.))
+                        .overflow_y_scroll()
+                        .map(|d| match split {
+                            true => d.h(px(self.prefs.projects_height)).flex_shrink(1.),
+                            false => d.flex_1(),
+                        })
+                        .on_drag_move(cx.listener(
+                            |this, ev: &DragMoveEvent<SplitProjects>, window, cx| {
+                                let top = f32::from(ev.bounds.top());
+                                let room = f32::from(window.viewport_size().height);
+                                this.prefs.projects_height = (f32::from(ev.event.position.y) - top)
+                                    .clamp(60., (room - top - 200.).max(60.));
+                                this.save_soon(cx);
+                                cx.notify();
+                            },
+                        ))
+                        .child(
+                            row("all-projects", selected.is_none(), c)
+                                .child(row_icon("folders", selected.is_none(), c))
+                                .child("All projects")
+                                .on_click(
+                                    cx.listener(|this, _, _, cx| this.select_project(None, cx)),
+                                ),
+                        )
+                        .children(projects)
+                        .child(
+                            row("connect", false, c)
+                                .child(icon("plus").size_4())
+                                .child("Add project")
+                                .on_click(cx.listener(|this, _, _, cx| this.connect_folder(cx))),
+                        ),
+                )
             })
-            .child(div().flex_1().min_h_4())
+            .when(split, |d| {
+                d.child(
+                    div()
+                        .id("split-projects")
+                        .flex_shrink_0()
+                        .h(px(6.))
+                        .mb(px(-6.))
+                        .cursor_row_resize()
+                        .border_b_1()
+                        .border_color(c.border)
+                        .hover(|s| s.bg(c.link.opacity(0.4)))
+                        .on_mouse_down(MouseButton::Left, |_, _, cx| {
+                            gpui_kit::component::GlobalState::suppress_text_selection(cx)
+                        })
+                        .on_drag(SplitProjects, |_, _, _, cx| cx.new(|_| SplitProjects)),
+                )
+            })
+            .when(has_folders, |d| {
+                d.child(
+                    heading("folders-heading", "WORK FOLDERS", !folders_open, c, cx).on_click(
+                        cx.listener(|this, _, _, cx| {
+                            this.prefs.folders_collapsed = !this.prefs.folders_collapsed;
+                            this.save_soon(cx);
+                            cx.notify();
+                        }),
+                    ),
+                )
+            })
+            .when(folders_open, |d| {
+                d.child(
+                    div()
+                        .id("folders-list")
+                        .flex()
+                        .flex_col()
+                        .flex_1()
+                        .min_h(px(60.))
+                        .overflow_y_scroll()
+                        .children(folders),
+                )
+            })
+            .when(!projects_open && !folders_open, |d| d.child(div().flex_1()))
             .child(
                 div()
                     .flex()
@@ -277,5 +361,59 @@ impl Mdk {
                             ),
                     ),
             )
+            .when_some(self.project_menu_view(c, cx), |d, menu| d.child(menu))
+    }
+
+    /// The right-click menu of a project: rescan (or locate, when the folder is gone) and
+    /// remove.
+    fn project_menu_view(&self, c: Colors, cx: &mut Context<Self>) -> Option<impl IntoElement> {
+        let (id, position) = self.project_menu.clone()?;
+        let project = self.board.projects.iter().find(|p| p.id == id)?;
+        let ok = project.status == ProjectStatus::Ok;
+        let (rescan, locate, remove) = (id.clone(), id.clone(), id);
+        let menu = div()
+            .id("project-menu")
+            .occlude()
+            .w(px(160.))
+            .p_1()
+            .bg(c.card)
+            .border_1()
+            .border_color(c.strong)
+            .on_mouse_down_out(cx.listener(|this, _, _, cx| {
+                this.project_menu = None;
+                cx.notify();
+            }))
+            .map(|d| match ok {
+                true => d.child(
+                    menu_item("project-rescan", "refresh", "Rescan", c.accent_fg, c).on_click(
+                        cx.listener(move |this, _, _, cx| {
+                            this.project_menu = None;
+                            this.rescan(&rescan, cx)
+                        }),
+                    ),
+                ),
+                false => d.child(
+                    menu_item(
+                        "project-locate",
+                        "folder-open",
+                        "Locate folder",
+                        c.accent_fg,
+                        c,
+                    )
+                    .on_click(cx.listener(move |this, _, _, cx| {
+                        this.project_menu = None;
+                        this.locate_folder(locate.clone(), cx)
+                    })),
+                ),
+            })
+            .child(
+                menu_item("project-remove", "plug-off", "Remove project", c.danger, c).on_click(
+                    cx.listener(move |this, _, _, cx| {
+                        this.project_menu = None;
+                        this.remove_project(&remove, cx)
+                    }),
+                ),
+            );
+        Some(deferred(anchored().position(position).snap_to_window().child(menu)).with_priority(1))
     }
 }
