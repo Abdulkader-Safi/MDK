@@ -8,7 +8,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-14, windows-latest, ubuntu-22.04]
+        os: [macos-15, windows-latest, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
     # A run takes a few minutes. Windows has hung once; fail it instead of waiting 6 hours.
     timeout-minutes: 30
