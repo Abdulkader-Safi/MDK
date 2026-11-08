@@ -664,7 +664,7 @@ pub(crate) fn kbd(text: &'static str, c: Colors, cx: &App) -> Div {
 
 /// The outlined priority badge: a square in the priority's colour and its name.
 pub(crate) fn priority_badge(priority: mdk_format::Priority, c: Colors, cx: &App) -> Div {
-    let (color, _) = crate::theme::priority_colors(priority, c.dark);
+    let color = crate::theme::priority_color(priority, c.dark);
     div()
         .flex()
         .flex_shrink_0()
@@ -863,4 +863,12 @@ pub(crate) fn chip(id: impl Into<ElementId>, on: bool, c: Colors) -> Stateful<Di
                 .text_color(c.muted_fg)
                 .hover(|s| s.bg(c.secondary).text_color(c.fg)),
         })
+}
+
+/// Labels typed as `a, b, c`: trimmed, empties dropped.
+pub(crate) fn split_labels(text: &str) -> Vec<String> {
+    text.split(',')
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect()
 }

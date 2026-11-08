@@ -6,7 +6,7 @@
 //! field of the same card survives. If the file changes while the form has unsaved edits,
 //! nothing is written until the user picks a side.
 
-use super::{Colors, choice, field, icon_button, label, status_dot, toggle};
+use super::{Colors, choice, field, icon_button, label, split_labels, status_dot, toggle};
 use crate::app::{Confirm, Mdk, Resize};
 use crate::board::{Card, CardKey};
 use crate::prefs::EditorTab;
@@ -133,13 +133,6 @@ pub struct CardEditor {
 
 fn parse_date(due: Option<&str>) -> Option<NaiveDate> {
     NaiveDate::parse_from_str(due?, "%Y-%m-%d").ok()
-}
-
-fn split_labels(text: &str) -> Vec<String> {
-    text.split(',')
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect()
 }
 
 impl CardEditor {
@@ -298,12 +291,7 @@ impl CardEditor {
         if self.raw_mode {
             return self.raw_text(cx);
         }
-        let file_name = self
-            .key
-            .rel_path
-            .rsplit('/')
-            .next()
-            .unwrap_or(&self.key.rel_path);
+        let file_name = crate::board::file_name(&self.key.rel_path);
         let patch = self.patch(cx);
         if patch == CardPatch::default() {
             return self.base.raw.to_string();
@@ -875,7 +863,7 @@ impl Mdk {
         };
         let tab = self.prefs.editor_tab;
         let saving = editor.save_task.is_some();
-        let listener_button =
+        let small_button =
             |id: &'static str, label: &'static str| Button::new(id).small().label(label);
 
         let tab_button =
@@ -1189,10 +1177,10 @@ impl Mdk {
                     .when(editor.deleted, |d| {
                         d.child(
                             self.banner("This file was deleted", c)
-                                .child(listener_button("recreate", "Recreate").outline().on_click(
+                                .child(small_button("recreate", "Recreate").outline().on_click(
                                     cx.listener(|this, _, window, cx| this.recreate_card(window, cx)),
                                 ))
-                                .child(listener_button("deleted-close", "Close").ghost().on_click(
+                                .child(small_button("deleted-close", "Close").ghost().on_click(
                                     cx.listener(|this, _, window, cx| this.close_editor(window, cx)),
                                 )),
                         )
@@ -1200,13 +1188,13 @@ impl Mdk {
                     .when(editor.conflict && !editor.deleted, |d| {
                         d.child(
                             self.banner("Changed on disk", c)
-                                .child(listener_button("keep-mine", "Keep mine").outline().on_click(
+                                .child(small_button("keep-mine", "Keep mine").outline().on_click(
                                     cx.listener(|this, _, window, cx| {
                                         this.resolve_conflict(true, window, cx)
                                     }),
                                 ))
                                 .child(
-                                    listener_button("load-theirs", "Load theirs").outline().on_click(
+                                    small_button("load-theirs", "Load theirs").outline().on_click(
                                         cx.listener(|this, _, window, cx| {
                                             this.resolve_conflict(false, window, cx)
                                         }),

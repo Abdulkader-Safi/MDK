@@ -3,7 +3,7 @@
 //! badge colours, so this fails if either drifts.
 
 use gpui_kit::Rgba;
-use mdk::theme::{due_colors, priority_colors};
+use mdk::theme::{due_colors, priority_color};
 use mdk_format::Priority;
 use serde_json::Value;
 
@@ -125,12 +125,11 @@ fn both_themes_meet_the_contrast_rules() {
             4.5,
         );
         for priority in Priority::ALL {
-            let (text, tint) = priority_colors(priority, dark);
-            let badge = over(from_gpui(tint), card);
+            // The badge has no fill, so its text sits on the card.
             check(
                 &format!("{} badge", priority.as_str()),
-                from_gpui(text),
-                badge,
+                from_gpui(priority_color(priority, dark)),
+                card,
                 4.5,
             );
         }

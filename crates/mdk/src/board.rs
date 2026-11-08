@@ -39,7 +39,7 @@ pub struct Card {
 
 impl Card {
     fn new(project: &str, rel_path: &str, content: Result<String, String>) -> Card {
-        let file_name = rel_path.rsplit('/').next().unwrap_or(rel_path);
+        let file_name = file_name(rel_path);
         let (raw, unreadable) = match content {
             Ok(text) => (text, None),
             Err(why) => (String::new(), Some(why)),
@@ -374,7 +374,12 @@ pub struct NewCard {
     pub labels: Vec<String>,
 }
 
-const BROKEN: &str = "Fix the frontmatter first";
+pub(crate) const BROKEN: &str = "Fix the frontmatter first";
+
+/// The last part of a card's path inside its project: `auth/login.md` gives `login.md`.
+pub(crate) fn file_name(rel_path: &str) -> &str {
+    rel_path.rsplit('/').next().unwrap_or(rel_path)
+}
 
 impl Board {
     // ---- projects ---------------------------------------------------------------------------
@@ -563,6 +568,12 @@ impl Board {
         }
     }
 
+    /// A card's title for an undo label, or empty when the card is gone.
+    fn title_of(&self, key: &CardKey) -> String {
+        self.card(key)
+            .map_or_else(String::new, |c| c.data.title.clone())
+    }
+
     fn record(&mut self, label: impl Into<String>, ops: Vec<FileOp>) {
         if !ops.is_empty() {
             self.undo.push(UndoEntry {
@@ -579,7 +590,7 @@ impl Board {
             return Err(BROKEN.to_string());
         }
         let store = self.store_for(key)?;
-        let file_name = key.rel_path.rsplit('/').next().unwrap_or(&key.rel_path);
+        let file_name = file_name(&key.rel_path);
         let now = mdk_format::now_iso();
         let (before, after) = store
             .update(&key.rel_path, |raw| {
@@ -597,9 +608,7 @@ impl Board {
     /// Change a card's fields. Only the fields the patch names are written.
     pub fn update_card(&mut self, key: &CardKey, patch: &CardPatch) -> Result<(), String> {
         let op = self.patch(key, patch)?;
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         self.record(format!("Edit {title}"), vec![op]);
         Ok(())
     }
@@ -728,7 +737,7 @@ impl Board {
         let rel_path = store
             .free_name(&folder, &mdk_format::new_file_name(title, today))
             .map_err(|e| e.to_string())?;
-        let file_name = rel_path.rsplit('/').next().unwrap_or(&rel_path);
+        let file_name = file_name(&rel_path);
         let now = mdk_format::now_iso();
         let body = input.body.trim();
         let card = ParsedCard {
@@ -770,9 +779,7 @@ impl Board {
 
     /// Delete a card file. Its exact text is kept, so the delete can be undone.
     pub fn delete_card(&mut self, key: &CardKey) -> Result<(), String> {
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         let text = self
             .store_for(key)?
             .delete(&key.rel_path)
@@ -801,9 +808,7 @@ impl Board {
             .write(&key.rel_path, text)
             .map_err(|e| e.to_string())?;
         self.reload(key, Some(text));
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         let verb = if before.is_some() { "Edit" } else { "Recreate" };
         self.record(
             format!("{verb} {title}"),
@@ -833,7 +838,7 @@ impl Board {
         for from in self.archivable() {
             let moved = (|| {
                 let store = self.store_for(&from)?;
-                let file_name = from.rel_path.rsplit('/').next().unwrap_or(&from.rel_path);
+                let file_name = file_name(&from.rel_path);
                 let rel_path = store
                     .free_name("archive", file_name)
                     .map_err(|e| e.to_string())?;

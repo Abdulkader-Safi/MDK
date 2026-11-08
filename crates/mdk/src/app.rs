@@ -175,8 +175,8 @@ pub fn single_instance(config_dir: &Path) -> Option<Instance> {
 
     let (tx, rx) = unbounded();
     let _ = std::fs::create_dir_all(config_dir);
-    let name = |_: ()| instance_name(config_dir).ok();
-    if let Some(mut stream) = name(()).and_then(|name| Stream::connect(name).ok()) {
+    let name = || instance_name(config_dir).ok();
+    if let Some(mut stream) = name().and_then(|name| Stream::connect(name).ok()) {
         // Stay connected until the first mdk accepts and hangs up. On Windows a client that
         // leaves before the accept is dropped unseen, and the signal is lost. The wait is
         // capped so a frozen first mdk cannot hold this launch.
@@ -189,7 +189,7 @@ pub fn single_instance(config_dir: &Path) -> Option<Instance> {
         return None;
     }
     // Nobody answered, so a socket file left here is from a crash. Take it over.
-    let listener = name(()).and_then(|name| {
+    let listener = name().and_then(|name| {
         ListenerOptions::new()
             .name(name)
             .try_overwrite(true)
@@ -731,8 +731,7 @@ impl Mdk {
             // Catch up on whatever changed while updates were paused.
             self.rescan_all(cx);
         }
-        self.save_soon(cx);
-        cx.notify();
+        self.prefs_changed(cx);
     }
 
     /// A preference changed: save it and redraw.
@@ -743,8 +742,7 @@ impl Mdk {
 
     pub fn set_vim_keys(&mut self, on: bool, cx: &mut Context<Self>) {
         self.prefs.vim_keys = on;
-        self.save_soon(cx);
-        cx.notify();
+        self.prefs_changed(cx);
     }
 
     pub fn toggle_theme(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -754,8 +752,7 @@ impl Mdk {
             ThemeChoice::Dark
         };
         theme::apply(self.prefs.theme, window, cx);
-        self.save_soon(cx);
-        cx.notify();
+        self.prefs_changed(cx);
     }
 
     fn remember_window(&mut self, window: &Window) {
@@ -939,8 +936,7 @@ impl Mdk {
                 self.prefs.editor_width = (room - x).clamp(420., (room - 320.).max(420.))
             }
         }
-        self.save_soon(cx);
-        cx.notify();
+        self.prefs_changed(cx);
     }
 
     /// The pointer moved during a drag. Every column hears this, so check the bounds.
@@ -1114,7 +1110,7 @@ impl Mdk {
             && let Some(card) = self.focused.as_ref().and_then(|key| self.board.card(key))
         {
             if card.error().is_some() {
-                self.show_toast("Fix the frontmatter first", false, cx);
+                self.show_toast(crate::board::BROKEN, false, cx);
             } else {
                 self.grabbed = Some(Grabbed {
                     key: card.key.clone(),
