@@ -51,7 +51,7 @@ Field rules:
 - `id`: slug plus date, unique inside the project.
 - `dueDate`: `YYYY-MM-DD` or null.
 - `labels`: list of short tags.
-- `order`: number for sorting inside a column. New cards go last, so use the current highest plus 1.
+- `order`: number for sorting inside a column. New cards go last: any number above the column's highest works. Highest plus 1 is simplest; mdk itself uses the current time in milliseconds.
 - `created`: set once. `modified`: refresh to the current UTC time on every edit.
 - The first `#` heading matches the task title.
 
