@@ -3,6 +3,12 @@
 Milestone log for mdk. The build spec is `resources/06-build-spec.md`.
 
 
+## Review follow-ups (2026-11-08)
+
+- The preview finds images through `source::image_file`, which follows symlinks and refuses any image whose real path is outside the project. The store's `read_image` did the same check but was never called, so it is gone. The planning docs in `resources/` still name it.
+- Settings are version 2. `selected_project` and `selected_workspace` are `null` for all, where version 1 wrote `"all"`, which hid a work folder really named `all/`. A version 1 `"all"` still loads as all. An older mdk can't read a version 2 file, so it sets the file aside and starts fresh.
+- Locate folder clears an old notice when it works, as Connect already did.
+
 ## Code review fixes (2026-11-08)
 
 A review of the source found seven bugs. All are fixed on the `code-review` branch, each with a test that failed first.
