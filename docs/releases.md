@@ -4,6 +4,11 @@ Each release is one `## ` heading: `## <tag> · <date> · <title>`. Everything u
 heading, down to the next `## `, is that release's notes in plain markdown. Write as much
 as you like. The release workflow copies the section for a tag into its GitHub release.
 
+## v0.1.5 · 2026-11-08 · Check for updates
+
+- "Check for Updates..." in the mdk menu, and "Check for updates" in the command palette. mdk asks GitHub for the latest release, then tells you you're on the latest version or offers the download.
+- This is the only time mdk goes online, and only when you click it. mdk still has no account, no telemetry and no automatic checks.
+
 ## v0.1.4 · 2026-11-07 · A sidebar that stays in order
 
 - The header and the settings stay put while projects and work folders scroll on their own, so the footer sits at the bottom even with one project.

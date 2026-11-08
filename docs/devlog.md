@@ -4,7 +4,7 @@ Each entry is one `## ` heading: `## <date> · <title>`, or `## <date> · <tags>
 when the work shipped in a release (`v0.1.4`, several tags separated by spaces, or `next`).
 Everything under the heading is plain markdown. Newest first.
 
-## 2026-11-08 · next · Check for updates
+## 2026-11-08 · v0.1.5 · Check for updates
 
 A "Check for Updates" item in the mdk menu and the command palette. mdk asks GitHub for the latest release only when you click it, then says you are up to date or offers the download.
 
