@@ -308,7 +308,8 @@ fn excerpts() {
 
 #[test]
 fn custom_keys_with_spaces_dots_or_accents_survive_a_save() {
-    let raw = "---\nid: \"a\"\norder: 1\nstory points: 3\njira.key: ABC-1\npriorité: haute\n---\n# A\n";
+    let raw =
+        "---\nid: \"a\"\norder: 1\nstory points: 3\njira.key: ABC-1\npriorité: haute\n---\n# A\n";
     let patch = CardPatch {
         status: Some(Status::Done),
         ..Default::default()

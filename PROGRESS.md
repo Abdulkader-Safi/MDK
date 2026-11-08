@@ -12,7 +12,7 @@ A review of the source found seven bugs. All are fixed on the `code-review` bran
 - The title is the first `# ` heading outside fenced code. A lone `#` no longer takes the next line. This changes the Electron golden `edge/heading-newline`, whose expected output now matches Markdown.
 - A move that renumbers a column rolls back its writes if one fails, for example on a card with broken frontmatter.
 - Escape after a keyboard grab undoes every move since pick-up, renumbered neighbours included, and leaves no undo steps. If a file changed on disk meanwhile, it falls back to restoring the grabbed card.
-- Links in the preview treat `\` as a separator and refuse any path part with `:`, so on Windows an image can't come from another drive, `..\`, or a network share.
+- Links in the preview treat `\` as a separator and refuse any path part with `:`, so on Windows an image can't come from another drive or climb out with `..\`. A network share path resolves inside the project.
 - `AGENTS.md` and the skill now say any `order` above the column's highest is fine, which matches what the app writes (the time in milliseconds).
 
 
