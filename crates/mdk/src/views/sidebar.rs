@@ -158,7 +158,11 @@ impl Mdk {
         let folder = |name: Option<String>, cx: &mut Context<Self>| {
             let text = name.clone().unwrap_or_else(|| "all".into());
             let selected = current == name;
-            row(SharedString::from(format!("folder-{text}")), selected, c)
+            // A folder can be called "all", so the All row's id can't be built from its text.
+            let id = name
+                .as_ref()
+                .map_or("all-folders".into(), |n| format!("folder-{n}"));
+            row(SharedString::from(id), selected, c)
                 .child(row_icon("layout-grid", selected, c))
                 .child(div().flex_1().truncate().child(text))
                 .on_click(
