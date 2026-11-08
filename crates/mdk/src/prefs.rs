@@ -97,15 +97,16 @@ pub const SIDEBAR_WIDTH: f32 = 240.;
 pub const PROJECTS_HEIGHT: f32 = 240.;
 pub const EDITOR_WIDTH: f32 = 672.;
 
-/// `"all"` in the file means no project or work folder is selected.
+/// A `null` selection means all projects or all work folders. Version 1 wrote `"all"`,
+/// which hid a work folder really named `all`; [`Prefs::load`] reads that as `null`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Prefs {
     pub version: u32,
     /// In sidebar order.
     pub projects: Vec<SavedProject>,
-    pub selected_project: String,
-    pub selected_workspace: String,
+    pub selected_project: Option<String>,
+    pub selected_workspace: Option<String>,
     pub auto_refresh: bool,
     pub vim_keys: bool,
     pub theme: ThemeChoice,
@@ -128,10 +129,10 @@ pub struct Prefs {
 impl Default for Prefs {
     fn default() -> Self {
         Prefs {
-            version: 1,
+            version: 2,
             projects: Vec::new(),
-            selected_project: "all".into(),
-            selected_workspace: "all".into(),
+            selected_project: None,
+            selected_workspace: None,
             auto_refresh: true,
             vim_keys: false,
             theme: ThemeChoice::Dark,
@@ -173,7 +174,7 @@ impl Prefs {
             Err(e) => Err(e.to_string()),
         };
         let error = match parsed {
-            Ok(prefs) => return (prefs, None),
+            Ok(prefs) => return (Prefs::upgrade(prefs), None),
             Err(error) => error,
         };
         let stamp = mdk_format::now_iso().replace(':', "-");
@@ -184,6 +185,18 @@ impl Prefs {
             message.push_str(&format!(" The old file could not be moved aside ({e})."));
         }
         (Prefs::default(), Some(message))
+    }
+
+    fn upgrade(mut prefs: Prefs) -> Prefs {
+        if prefs.version < 2 {
+            for selected in [&mut prefs.selected_project, &mut prefs.selected_workspace] {
+                if selected.as_deref() == Some("all") {
+                    *selected = None;
+                }
+            }
+            prefs.version = 2;
+        }
+        prefs
     }
 
     pub fn save(&self, dir: &Path) -> std::io::Result<()> {
@@ -214,8 +227,8 @@ mod tests {
                     root: "/code/clinicos".into(),
                 },
             ],
-            selected_project: "z9y8x7w6".into(),
-            selected_workspace: "backend".into(),
+            selected_project: Some("z9y8x7w6".into()),
+            selected_workspace: Some("backend".into()),
             auto_refresh: false,
             vim_keys: true,
             theme: ThemeChoice::System,
@@ -250,6 +263,30 @@ mod tests {
         let (prefs, message) = Prefs::load(dir.path());
         assert!(prefs.vim_keys && prefs.auto_refresh && message.is_none());
         assert_eq!(prefs.theme, ThemeChoice::Dark);
+    }
+
+    #[test]
+    fn a_work_folder_named_all_is_remembered() {
+        let dir = tempfile::tempdir().unwrap();
+        // Version 1 wrote "all" for nothing selected.
+        fs::write(
+            dir.path().join("config.json"),
+            r#"{"version":1,"selected_project":"all","selected_workspace":"all"}"#,
+        )
+        .unwrap();
+        let (prefs, _) = Prefs::load(dir.path());
+        assert_eq!(
+            (prefs.selected_project, prefs.selected_workspace),
+            (None, None)
+        );
+        // Now a folder can be called "all".
+        let prefs = Prefs {
+            selected_project: Some("a1b2c3d4".into()),
+            selected_workspace: Some("all".into()),
+            ..Prefs::default()
+        };
+        prefs.save(dir.path()).unwrap();
+        assert_eq!(Prefs::load(dir.path()).0, prefs);
     }
 
     #[test]

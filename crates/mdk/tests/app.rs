@@ -161,8 +161,8 @@ fn selection_and_toggles_are_saved_and_restored(cx: &mut TestAppContext) {
 
     let (saved, problem) = Prefs::load(f.config.path());
     assert_eq!(problem, None);
-    assert_eq!(saved.selected_project, "testproj");
-    assert_eq!(saved.selected_workspace, "board");
+    assert_eq!(saved.selected_project.as_deref(), Some("testproj"));
+    assert_eq!(saved.selected_workspace.as_deref(), Some("board"));
     assert!(saved.vim_keys);
     assert_eq!(saved.theme, ThemeChoice::Light);
     assert_eq!(saved.projects.len(), 1);

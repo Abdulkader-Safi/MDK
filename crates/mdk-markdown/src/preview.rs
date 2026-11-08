@@ -5,7 +5,7 @@
 
 use crate::source::{
     CARD_SCHEME, Callout, CardRef, HIGHLIGHT_SCHEME, MISSING_SCHEME, Tone, code_key, dollar_guard,
-    find_link, is_external, is_image, parse_callout, percent_decode, prepare, resolve_path,
+    find_link, image_file, is_external, parse_callout, percent_decode, prepare,
 };
 use gpui_kit::component::ActiveTheme;
 use gpui_kit::component::text::{
@@ -384,15 +384,7 @@ impl MarkdownPlugin for Images {
                 .child(format!("{label} ({})", picture.url))
                 .into_any_element();
         }
-        // Only image files, and only inside the project folder: next to the card first,
-        // then at the project root, which is where `![[name.png]]` often means.
-        let inside = |page: &str| {
-            resolve_path(page, &picture.url)
-                .filter(|path| is_image(path))
-                .map(|path| self.context.root.join(path))
-                .filter(|file| file.is_file())
-        };
-        let file = inside(&self.context.page_path).or_else(|| inside(""));
+        let file = image_file(&self.context.root, &self.context.page_path, &picture.url);
         match file {
             Some(file) => {
                 drew("image-local");

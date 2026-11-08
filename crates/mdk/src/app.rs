@@ -369,10 +369,9 @@ impl Mdk {
         for p in &prefs.projects {
             board.add_project(p.id.clone(), p.name.clone(), p.root.clone());
         }
-        let pick = |s: &str| (s != "all").then(|| s.to_string());
-        board.select_project(pick(&prefs.selected_project));
-        if board.selected_project.is_some() || prefs.selected_project == "all" {
-            board.select_workspace(pick(&prefs.selected_workspace));
+        board.select_project(prefs.selected_project.clone());
+        if board.selected_project.is_some() || prefs.selected_project.is_none() {
+            board.select_workspace(prefs.selected_workspace.clone());
         }
 
         let (events, mut incoming) = unbounded::<(ProjectId, Vec<StoreEvent>)>();
@@ -694,7 +693,10 @@ impl Mdk {
     pub fn locate_folder(&mut self, id: ProjectId, cx: &mut Context<Self>) {
         self.pick_folder("Locate", cx, move |this, path, cx| {
             match this.board.relocate_project(&id, path) {
-                Ok(()) => this.rescan(&id, cx),
+                Ok(()) => {
+                    this.notice = None;
+                    this.rescan(&id, cx);
+                }
                 Err(error) => this.notice = Some(error),
             }
             this.selection_changed(cx);
@@ -780,7 +782,6 @@ impl Mdk {
     }
 
     pub fn save_now(&mut self) {
-        let all = || "all".to_string();
         self.prefs.projects = self
             .board
             .projects
@@ -791,8 +792,8 @@ impl Mdk {
                 root: p.root.clone(),
             })
             .collect();
-        self.prefs.selected_project = self.board.selected_project.clone().unwrap_or_else(all);
-        self.prefs.selected_workspace = self.board.selected_workspace.clone().unwrap_or_else(all);
+        self.prefs.selected_project = self.board.selected_project.clone();
+        self.prefs.selected_workspace = self.board.selected_workspace.clone();
         if let Err(error) = self.prefs.save(&self.config_dir) {
             self.notice = Some(format!("Settings could not be saved: {error}"));
         }

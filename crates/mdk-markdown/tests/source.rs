@@ -296,3 +296,33 @@ fn the_dollar_guard_keeps_prices_as_text() {
     assert!(!dollar_guard("5 a month, or ", Some('5')));
     assert!(!dollar_guard(" x", None) && !dollar_guard("x ", None) && !dollar_guard("", None));
 }
+
+#[cfg(unix)]
+#[test]
+fn image_files_must_really_be_inside_the_project() {
+    use mdk_markdown::source::image_file;
+    use std::fs;
+    let outside = tempfile::tempdir().unwrap();
+    fs::write(outside.path().join("secret.png"), "x").unwrap();
+    let project = tempfile::tempdir().unwrap();
+    let root = project.path().canonicalize().unwrap();
+    fs::create_dir_all(root.join("auth/img")).unwrap();
+    fs::write(root.join("auth/img/a.png"), "x").unwrap();
+    fs::write(root.join("top.png"), "x").unwrap();
+    std::os::unix::fs::symlink(
+        outside.path().join("secret.png"),
+        root.join("auth/leak.png"),
+    )
+    .unwrap();
+    std::os::unix::fs::symlink(root.join("top.png"), root.join("auth/alias.png")).unwrap();
+
+    let found = |url: &str| image_file(&root, "auth/card.md", url);
+    assert_eq!(found("img/a.png"), Some(root.join("auth/img/a.png")));
+    // Not next to the card, so the project root.
+    assert_eq!(found("top.png"), Some(root.join("top.png")));
+    // A symlink that stays inside the project is fine; one that leaves it is not.
+    assert_eq!(found("alias.png"), Some(root.join("auth/alias.png")));
+    assert_eq!(found("leak.png"), None);
+    assert_eq!(found("gone.png"), None);
+    assert_eq!(found("../../x.png"), None);
+}

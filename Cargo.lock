@@ -4091,6 +4091,7 @@ dependencies = [
  "mermaid-rs-renderer",
  "ratex-gpui",
  "regex",
+ "tempfile",
 ]
 
 [[package]]
