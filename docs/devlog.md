@@ -4,6 +4,12 @@ Each entry is one `## ` heading: `## <date> · <title>`, or `## <date> · <tags>
 when the work shipped in a release (`v0.1.4`, several tags separated by spaces, or `next`).
 Everything under the heading is plain markdown. Newest first.
 
+## 2026-11-08 · v0.1.6 · A code review
+
+A full review of the source found seven bugs. Five of them could change or delete what you wrote in a card file, all for the same reason: mdk read frontmatter with its own line-by-line parser, and only used a real YAML parser to spot broken files. Valid YAML that the line parser didn't understand got rewritten on the next save. Now the YAML parser reads the values.
+
+A clean-code pass followed. It removed dead code and swapped copied code for the helpers that already existed. It also found one more bug: a settings file mdk couldn't read was quietly overwritten.
+
 ## 2026-11-08 · v0.1.5 · Check for updates
 
 A "Check for Updates" item in the mdk menu and the command palette. mdk asks GitHub for the latest release only when you click it, then says you are up to date or offers the download.

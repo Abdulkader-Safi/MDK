@@ -4,6 +4,17 @@ Each release is one `## ` heading: `## <tag> · <date> · <title>`. Everything u
 heading, down to the next `## `, is that release's notes in plain markdown. Write as much
 as you like. The release workflow copies the section for a tag into its GitHub release.
 
+## v0.1.6 · 2026-11-08 · Your card files stay as you wrote them
+
+- A comment after a value, like `status: in-progress # waiting`, no longer resets the card to Backlog when it's saved.
+- A `labels` list written over several lines is read properly. It used to be saved back as `labels: []`.
+- Your own frontmatter keys survive a save even with a space, a dot or an accent in the name, such as `story points: 3`.
+- A `# ` line inside a code block is no longer taken as the card's title, so renaming the card can't overwrite your code.
+- Pressing Escape after picking up a card with Space puts the whole column back exactly as it was.
+- A move that fails halfway, for example next to a card with broken frontmatter, now undoes what it already wrote.
+- On Windows, an image link in a card can't reach files outside the project folder, or a network share.
+- A settings file mdk can't read is set aside and kept, instead of being overwritten.
+
 ## v0.1.5 · 2026-11-08 · Check for updates
 
 - "Check for Updates..." in the mdk menu, and "Check for updates" in the command palette. mdk asks GitHub for the latest release, then tells you you're on the latest version or offers the download.
