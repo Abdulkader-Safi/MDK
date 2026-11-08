@@ -4,4 +4,5 @@ pub mod board;
 pub mod logging;
 pub mod prefs;
 pub mod theme;
+pub mod update;
 pub mod views;

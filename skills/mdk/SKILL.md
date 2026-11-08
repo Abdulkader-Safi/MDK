@@ -79,7 +79,7 @@ Rules for these:
 - Image paths are relative to the card file. `![[name.png]]` also tries the project root.
 - `%%` comments are hidden from people, not from the file. Never put secrets in them. Two `%%` anywhere, even inside backticks, hide the text between them.
 - Raw HTML is shown as text, not rendered. `<br>` is the one exception: it breaks the line.
-- Remote images are not loaded. mdk makes no network requests.
+- Remote images are not loaded. mdk makes no network requests, except "Check for updates" when the user clicks it.
 - `- [ ]` items anywhere in the body count toward the card's subtask badge.
 
 ## Adding a task

@@ -3,6 +3,13 @@
 Milestone log for mdk. The build spec is `resources/06-build-spec.md`.
 
 
+## Check for updates, releases and devlog pages (2026-11-08)
+
+- "Check for Updates..." in the mdk menu and "Check for updates" in the command palette. Safi chose a manual check over an automatic one, because NFR-02 promised no network requests. NFR-02 now names this one exception.
+- `crates/mdk/src/update.rs` runs the system `curl` against GitHub's latest-release API, so no HTTP client is compiled in and the `cargo deny` bans stay. On Windows it passes `CREATE_NO_WINDOW`, or curl would flash a console. The toast offers "Download" (newer version), says you have the latest, or offers "Open releases" when GitHub can't be reached. `MDK_SHOW=updates` runs the check at launch for screenshots.
+- The site has `releases.html` and `devlog.html`, rendered from `docs/releases.md` and `docs/devlog.md` with `docs/log.js`. The release workflow copies a tag's section of `releases.md` into the GitHub release. Shared CSS moved to `docs/style.css`.
+- Checked by hand: the up-to-date toast against the real API, and the newer-version toast with the version faked to 0.1.0. Not checked: the curl path on Windows and Linux, and the toast when offline.
+
 ## Sidebar layout (2026-11-07)
 
 - The brand header and the settings footer stay put. Projects and work folders each scroll on their own, so the footer sits at the bottom even with one project.

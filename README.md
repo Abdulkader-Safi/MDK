@@ -2,7 +2,7 @@
 
 A kanban board where every card is a markdown file. Your AI coding agent edits the file, and the card moves on your screen within half a second.
 
-mdk is free and open source (MIT). It runs on macOS, Windows and Linux, with no account and no network requests.
+mdk is free and open source (MIT). It runs on macOS, Windows and Linux, with no account. It makes no network requests unless you click "Check for updates".
 
 [Download the latest release](https://github.com/Abdulkader-Safi/MDK/releases/latest) · [Website](https://abdulkader-safi.github.io/MDK/)
 
@@ -38,7 +38,8 @@ Right-click a project in the sidebar to rescan it or remove it from the list. Re
 - A preview with tables, task lists, code, maths (`$x^2$`), Mermaid diagrams, callouts, `==highlights==`, `[[wikilinks]]` and images from the project folder.
 - Filters by text, priority, assignee, label and due date, saved as views per project, plus a sortable list view.
 - A command palette, undo and redo for moves, creates, deletes and archives, and "Copy AI prompt" to hand a card to an agent.
-- No account, no network requests, no telemetry. mdk writes nothing in your folders except card files.
+- "Check for updates" in the mdk menu and the command palette. It is the only time mdk goes online: one request to GitHub, only when you click it.
+- No account, no telemetry. mdk writes nothing in your folders except card files.
 
 mdk is a Rust rebuild of [MD Kanban](https://github.com/Abdulkader-Safi/md-kanban), the Electron app, on GPUI and gpui-kit. It reads and writes the same card files, so both apps can open the same folder.
 
@@ -119,7 +120,7 @@ Everything mdk remembers is in one `config.json` in the OS config folder: `~/Lib
 - `MDK_CONFIG_DIR`: use another folder.
 - `MDK_LOG`: log level, `info` by default. `debug` says more.
 - `MDK_NO_WATCH=1`: turn the file watcher off.
-- `MDK_SHOW`: open screens at launch, for screenshots and manual checks. For example `MDK_SHOW="card=writing/preview-showcase-2026-10-11.md;preview"`. Words: `card=<path>`, `preview`, `markdown`, `list`, `board`, `palette`, `new`, `settings`, `light`, `dark`, `vim`, `project=<name>`.
+- `MDK_SHOW`: open screens at launch, for screenshots and manual checks. For example `MDK_SHOW="card=writing/preview-showcase-2026-10-11.md;preview"`. Words: `card=<path>`, `preview`, `markdown`, `list`, `board`, `palette`, `new`, `settings`, `updates`, `light`, `dark`, `vim`, `project=<name>`.
 
 ## Build from source
 
@@ -162,7 +163,7 @@ To publish a release, bump `version` in `Cargo.toml` and `Packager.toml`, commit
 
 The app icon comes from `crates/mdk/assets/app/app-icon.svg`. After editing it, run `scripts/app-icon.sh` to rebuild the `.icns`, `.ico` and `.png`.
 
-The site in `docs/` is the GitHub Pages landing page. Its screenshots come from the app.
+The site in `docs/` is the GitHub Pages landing page. Its screenshots come from the app. The releases and devlog pages render `docs/releases.md` and `docs/devlog.md`: add a `## ` section there, and the matching section of `releases.md` also becomes the GitHub release notes when you push the tag.
 
 ## Tests
 

@@ -40,7 +40,8 @@ actions!(
         ToggleVim,
         ShowBoard,
         ShowList,
-        ArchiveDone
+        ArchiveDone,
+        CheckForUpdates
     ]
 );
 
@@ -76,6 +77,7 @@ pub fn bind_keys(cx: &mut App) {
             menu(
                 "mdk",
                 vec![
+                    MenuItem::action("Check for Updates...", CheckForUpdates),
                     MenuItem::action("Settings...", OpenSettings),
                     MenuItem::separator(),
                     MenuItem::action("Quit mdk", Quit),
@@ -215,6 +217,8 @@ pub struct Toast {
     pub text: String,
     /// Show an Undo button.
     pub undo: bool,
+    /// Show a button that opens this web page, with this label.
+    pub link: Option<(&'static str, &'static str)>,
 }
 
 /// A question the user must answer before something destructive happens.
@@ -801,9 +805,31 @@ impl Mdk {
         self.toast = Some(Toast {
             text: text.into(),
             undo,
+            link: None,
         });
+        self.hide_toast_after(5, cx);
+    }
+
+    /// A toast with a button that opens a web page. It stays longer, so there is time to click.
+    fn show_link_toast(
+        &mut self,
+        text: impl Into<String>,
+        link: (&'static str, &'static str),
+        cx: &mut Context<Self>,
+    ) {
+        self.toast = Some(Toast {
+            text: text.into(),
+            undo: false,
+            link: Some(link),
+        });
+        self.hide_toast_after(12, cx);
+    }
+
+    fn hide_toast_after(&mut self, seconds: u64, cx: &mut Context<Self>) {
         self.toast_task = Some(cx.spawn(async move |this, cx| {
-            cx.background_executor().timer(Duration::from_secs(5)).await;
+            cx.background_executor()
+                .timer(Duration::from_secs(seconds))
+                .await;
             this.update(cx, |this, cx| {
                 this.toast = None;
                 cx.notify();
@@ -1430,7 +1456,44 @@ impl Mdk {
                 self.settings_open = true;
                 cx.notify();
             }
+            Command::CheckForUpdates => self.check_for_updates(cx),
         }
+    }
+
+    /// Ask GitHub for the latest release. The only network request mdk makes, and only
+    /// when the user asks for it.
+    pub fn check_for_updates(&mut self, cx: &mut Context<Self>) {
+        self.show_toast("Checking for updates...", false, cx);
+        cx.spawn(async move |this, cx| {
+            let latest = cx
+                .background_executor()
+                .spawn(async { crate::update::latest_tag() })
+                .await;
+            this.update(cx, |this, cx| {
+                let current = env!("CARGO_PKG_VERSION");
+                let page = ("Download", crate::update::RELEASES_PAGE);
+                match latest {
+                    Ok(tag) if crate::update::is_newer(&tag, current) => this.show_link_toast(
+                        format!("mdk {tag} is out. You have v{current}."),
+                        page,
+                        cx,
+                    ),
+                    Ok(_) => {
+                        this.show_toast(format!("You have the latest mdk, v{current}."), false, cx)
+                    }
+                    Err(error) => {
+                        log::warn!("update check failed: {error}");
+                        this.show_link_toast(
+                            "Couldn't reach GitHub to check for updates.",
+                            ("Open releases", crate::update::RELEASES_PAGE),
+                            cx,
+                        )
+                    }
+                }
+            })
+            .ok();
+        })
+        .detach();
     }
 
     pub fn set_theme(&mut self, choice: ThemeChoice, window: &mut Window, cx: &mut Context<Self>) {
@@ -1446,8 +1509,8 @@ impl Mdk {
 
     /// Open what `MDK_SHOW` asks for, once the cards are loaded. For screenshots and manual
     /// checks: `MDK_SHOW="card=backend/x.md;preview"`. Words: `card=<path>`, `preview`,
-    /// `markdown`, `list`, `board`, `palette`, `new`, `settings`, `light`, `dark`, `vim`,
-    /// `project=<name>`.
+    /// `markdown`, `list`, `board`, `palette`, `new`, `settings`, `updates`, `light`, `dark`,
+    /// `vim`, `project=<name>`.
     pub(crate) fn apply_show(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         if self.show.is_none() || self.board.projects.iter().any(|p| p.loading) {
             return;
@@ -1486,6 +1549,7 @@ impl Mdk {
                     "palette" => self.toggle_palette(window, cx),
                     "new" => self.open_new_card(Status::Backlog, window, cx),
                     "settings" => self.settings_open = true,
+                    "updates" => self.check_for_updates(cx),
                     "light" => self.set_theme(ThemeChoice::Light, window, cx),
                     "dark" => self.set_theme(ThemeChoice::Dark, window, cx),
                     "vim" => self.prefs.vim_keys = true,

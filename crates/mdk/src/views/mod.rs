@@ -13,9 +13,9 @@ pub use editor::CardEditor;
 pub use new_card::NewCardForm;
 
 use crate::app::{
-    ArchiveDone, Confirm, ConnectFolder, DragCard, FocusDown, FocusLeft, FocusRight, FocusUp, Mdk,
-    NewCardKey, OpenFocused, OpenSettings, PickUp, Redo, RescanAll, Resize, ShowBoard, ShowList,
-    TogglePalette, ToggleTheme, ToggleVim, Undo,
+    ArchiveDone, CheckForUpdates, Confirm, ConnectFolder, DragCard, FocusDown, FocusLeft,
+    FocusRight, FocusUp, Mdk, NewCardKey, OpenFocused, OpenSettings, PickUp, Redo, RescanAll,
+    Resize, ShowBoard, ShowList, TogglePalette, ToggleTheme, ToggleVim, Undo,
 };
 use crate::board::Command;
 use crate::prefs::ViewChoice;
@@ -120,6 +120,9 @@ impl Render for Mdk {
             }))
             .on_action(cx.listener(|this, _: &ToggleTheme, window, cx| {
                 this.run_command(Command::ToggleTheme, window, cx)
+            }))
+            .on_action(cx.listener(|this, _: &CheckForUpdates, window, cx| {
+                this.run_command(Command::CheckForUpdates, window, cx)
             }))
             .on_action(cx.listener(|this, _: &ToggleVim, window, cx| {
                 this.run_command(Command::ToggleVim, window, cx)
@@ -229,6 +232,19 @@ impl Render for Mdk {
                                         .small()
                                         .label("Undo")
                                         .on_click(cx.listener(|this, _, _, cx| this.undo(cx))),
+                                )
+                            })
+                            .when_some(toast.link, |d, (label, url)| {
+                                d.child(
+                                    Button::new("toast-link")
+                                        .ghost()
+                                        .small()
+                                        .label(label)
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            cx.open_url(url);
+                                            this.toast = None;
+                                            cx.notify();
+                                        })),
                                 )
                             }),
                     ),

@@ -253,7 +253,7 @@ gpui-kit notification, bottom centre for "Moved to X · Undo" (5 s), and for err
 
 ## Security
 - Path guard on every file operation (FR-FILE-09). Symlinks are resolved and must stay inside the root.
-- No network: no HTTP client in the dependency tree. CI checks that `reqwest`, `ureq` and `hyper` are absent with `cargo-deny` bans (NFR-02).
+- No network: no HTTP client in the dependency tree. The one exception, the user-started update check, runs the system `curl` (`crates/mdk/src/update.rs`). CI checks that `reqwest`, `ureq` and `hyper` are absent with `cargo-deny` bans (NFR-02).
 - External links open through the OS (`cx.open_url`) only for `http`, `https` and `mailto` schemes. `file:` and `javascript:` links are refused.
 - Markdown is never executed. Raw HTML is shown as text (FR-PREV-10).
 - YAML parsing is panic-free (serde-saphyr), with a 1 MB file size cap per card (NFR-04). Bigger files are listed with a "too large" marker and not parsed.

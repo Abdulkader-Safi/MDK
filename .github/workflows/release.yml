@@ -41,7 +41,15 @@ jobs:
         run: cargo about generate -m crates/mdk/Cargo.toml about.hbs -o THIRD_PARTY_LICENSES.html
       - name: Package
         run: cargo packager --release -c Packager.toml --formats ${{ matrix.format }}
+      # The notes for this tag are its section of docs/releases.md (empty if there is none).
+      - name: Release notes
+        shell: bash
+        run: |
+          awk -v tag="${GITHUB_REF_NAME}" '
+            /^## / { on = (index($0, "## " tag " ") == 1); next }
+            on' docs/releases.md > release-notes.md
       - uses: softprops/action-gh-release@v3
         with:
           files: ${{ matrix.artifact }}
+          body_path: release-notes.md
           generate_release_notes: true

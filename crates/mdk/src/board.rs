@@ -284,10 +284,11 @@ pub enum Command {
     ListView,
     ArchiveDone,
     Settings,
+    CheckForUpdates,
 }
 
 impl Command {
-    pub const ALL: [Command; 8] = [
+    pub const ALL: [Command; 9] = [
         Command::ConnectFolder,
         Command::RescanAll,
         Command::ToggleTheme,
@@ -296,6 +297,7 @@ impl Command {
         Command::ListView,
         Command::ArchiveDone,
         Command::Settings,
+        Command::CheckForUpdates,
     ];
 
     pub fn label(self) -> &'static str {
@@ -308,6 +310,7 @@ impl Command {
             Command::ListView => "List view",
             Command::ArchiveDone => "Archive done cards",
             Command::Settings => "Settings",
+            Command::CheckForUpdates => "Check for updates",
         }
     }
 }

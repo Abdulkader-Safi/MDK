@@ -210,7 +210,7 @@ None. No accounts, sign-in or cloud identity. mdk is a single-user desktop app t
 
 ## Non-functional requirements
 - **NFR-01 Performance:** mdk must beat the Electron app on all four Stage 1 measures, measured side by side on an M1 with 16 GB using Safi's 169-card board: (a) download size, (b) cold start to a rendered board, (c) idle memory after 10 minutes open, (d) time from a card file being saved by another program to the board showing it. Also, with a generated 1,000-card project: dragging and scrolling stay smooth (no frame over 33 ms in a 10-second scroll), and filter typing updates the board within 100 ms.
-- **NFR-02 Privacy and security:** no network requests at all. No telemetry, no update checks, no remote images. File access is limited to connected folders (FR-FILE-09).
+- **NFR-02 Privacy and security:** no network requests, with one exception: "Check for updates" asks GitHub for the latest release, and only when the user clicks it (changed 2026-11-08 at Safi's request). No telemetry, no automatic update checks, no remote images. File access is limited to connected folders (FR-FILE-09).
 - **NFR-03 Offline:** 100% of features work with networking off.
 - **NFR-04 Scale:** up to 20 connected projects, 5,000 cards in total, card files up to 1 MB, images up to 20 MB. Beyond that, mdk still works but may be slower.
 - **NFR-05 Platforms:** macOS 13+ on Apple Silicon. Windows 10 and 11 x64. Linux x64 (Ubuntu 22.04+ and Fedora 40+, X11 and Wayland). All three tested before each release.
