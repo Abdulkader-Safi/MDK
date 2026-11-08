@@ -63,20 +63,23 @@ fn percent_decode(s: &str) -> String {
 
 /// Resolve a link written in the card at `page_path` to a path in the project. A leading
 /// `/` is the project root. `None` when the link climbs out of the project.
+/// `\` counts as a separator and a part with `:` (a Windows drive) never resolves, so on
+/// Windows a link can't reach another drive, climb out with `..\`, or name a network share.
 pub fn resolve_path(page_path: &str, href: &str) -> Option<String> {
     let href = percent_decode(href.split('#').next().unwrap_or(""));
     let dir = page_path.rsplit_once('/').map_or("", |(dir, _)| dir);
-    let joined = match href.strip_prefix('/') {
+    let joined = match href.strip_prefix(['/', '\\']) {
         Some(from_root) => from_root.to_string(),
         None => format!("{dir}/{href}"),
     };
     let mut parts: Vec<&str> = Vec::new();
-    for part in joined.split('/') {
+    for part in joined.split(['/', '\\']) {
         match part {
             "" | "." => {}
             ".." => {
                 parts.pop()?;
             }
+            part if part.contains(':') => return None,
             part => parts.push(part),
         }
     }
