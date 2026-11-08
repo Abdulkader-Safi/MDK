@@ -227,8 +227,7 @@ impl Mdk {
                 heading("projects-heading", "PROJECTS", !projects_open, c, cx).on_click(
                     cx.listener(|this, _, _, cx| {
                         this.prefs.projects_collapsed = !this.prefs.projects_collapsed;
-                        this.save_soon(cx);
-                        cx.notify();
+                        this.prefs_changed(cx);
                     }),
                 ),
             )
@@ -250,8 +249,7 @@ impl Mdk {
                                 let room = f32::from(window.viewport_size().height);
                                 this.prefs.projects_height = (f32::from(ev.event.position.y) - top)
                                     .clamp(60., (room - top - 200.).max(60.));
-                                this.save_soon(cx);
-                                cx.notify();
+                                this.prefs_changed(cx);
                             },
                         ))
                         .child(
@@ -293,8 +291,7 @@ impl Mdk {
                     heading("folders-heading", "WORK FOLDERS", !folders_open, c, cx).on_click(
                         cx.listener(|this, _, _, cx| {
                             this.prefs.folders_collapsed = !this.prefs.folders_collapsed;
-                            this.save_soon(cx);
-                            cx.notify();
+                            this.prefs_changed(cx);
                         }),
                     ),
                 )
@@ -368,7 +365,7 @@ impl Mdk {
     /// remove.
     fn project_menu_view(&self, c: Colors, cx: &mut Context<Self>) -> Option<impl IntoElement> {
         let (id, position) = self.project_menu.clone()?;
-        let project = self.board.projects.iter().find(|p| p.id == id)?;
+        let project = self.board.project(&id)?;
         let ok = project.status == ProjectStatus::Ok;
         let (rescan, locate, remove) = (id.clone(), id.clone(), id);
         let menu = div()

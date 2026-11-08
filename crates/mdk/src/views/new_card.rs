@@ -1,6 +1,9 @@
 //! The New card dialog, with quick-add syntax in the title and three templates.
 
-use super::{Colors, choice, dialog, dialog_footer, dialog_header, field, icon_button, kbd, label};
+use super::{
+    Colors, choice, dialog, dialog_footer, dialog_header, field, icon_button, kbd, label,
+    split_labels,
+};
 use crate::app::{Mdk, today};
 use crate::board::NewCard;
 use gpui_kit::component::button::{Button, ButtonVariants};
@@ -94,11 +97,7 @@ impl NewCardForm {
     pub fn input(&self, cx: &App) -> (NewCard, String) {
         let quick = self.quick(cx);
         let text = |state: &Entity<InputState>| state.read(cx).value().trim().to_string();
-        let mut labels: Vec<String> = text(&self.labels)
-            .split(',')
-            .map(|l| l.trim().to_string())
-            .filter(|l| !l.is_empty())
-            .collect();
+        let mut labels = split_labels(&text(&self.labels));
         for label in quick.labels {
             if !labels.contains(&label) {
                 labels.push(label);

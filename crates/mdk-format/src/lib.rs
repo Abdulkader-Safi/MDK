@@ -55,17 +55,6 @@ impl Status {
         }
     }
 
-    /// The column colour, as 0xRRGGBB.
-    pub fn color(self) -> u32 {
-        match self {
-            Status::Backlog => 0x6b7280,
-            Status::Todo => 0x3b82f6,
-            Status::InProgress => 0xf59e0b,
-            Status::Review => 0x8b5cf6,
-            Status::Done => 0x22c55e,
-        }
-    }
-
     pub fn parse(s: &str) -> Option<Status> {
         Status::ALL.into_iter().find(|status| status.as_str() == s)
     }

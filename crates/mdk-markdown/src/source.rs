@@ -2,7 +2,7 @@
 //! markdown the parser knows, resolving links to cards, and reading callout headers.
 //!
 //! Wikilinks and `==highlight==` sit in the middle of text, where a parser plugin cannot
-//! reach them, so they are rewritten into links with an `mdk-…:` scheme before parsing.
+//! reach them, so they are rewritten into links with an `mdk-...:` scheme before parsing.
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -39,7 +39,7 @@ pub fn is_external(href: &str) -> bool {
 }
 
 /// `%20` and friends. A stray `%` is left as it is.
-fn percent_decode(s: &str) -> String {
+pub(crate) fn percent_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -63,20 +63,23 @@ fn percent_decode(s: &str) -> String {
 
 /// Resolve a link written in the card at `page_path` to a path in the project. A leading
 /// `/` is the project root. `None` when the link climbs out of the project.
+/// `\` counts as a separator and a part with `:` (a Windows drive) never resolves, so on
+/// Windows a link can't reach another drive, climb out with `..\`, or name a network share.
 pub fn resolve_path(page_path: &str, href: &str) -> Option<String> {
     let href = percent_decode(href.split('#').next().unwrap_or(""));
     let dir = page_path.rsplit_once('/').map_or("", |(dir, _)| dir);
-    let joined = match href.strip_prefix('/') {
+    let joined = match href.strip_prefix(['/', '\\']) {
         Some(from_root) => from_root.to_string(),
         None => format!("{dir}/{href}"),
     };
     let mut parts: Vec<&str> = Vec::new();
-    for part in joined.split('/') {
+    for part in joined.split(['/', '\\']) {
         match part {
             "" | "." => {}
             ".." => {
                 parts.pop()?;
             }
+            part if part.contains(':') => return None,
             part => parts.push(part),
         }
     }
@@ -197,7 +200,7 @@ pub fn parse_callout(source: &str) -> Option<Callout> {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prepared {
     pub source: String,
-    /// `title="…"` from a code fence, keyed by [`code_key`] of the block's code.
+    /// `title="..."` from a code fence, keyed by [`code_key`] of the block's code.
     pub code_titles: HashMap<u64, String>,
 }
 
@@ -240,18 +243,15 @@ fn wikilink(inner: &str, cards: &[CardRef]) -> String {
     }
 }
 
-/// Whether `<…` here is an HTML tag (to show as text), and not `<br>` or an autolink.
+/// Whether `<...` here is an HTML tag (to show as text), and not `<br>` or an autolink.
 fn is_html_tag(rest: &str) -> bool {
     let after = &rest[1..];
     let lower = after.to_lowercase();
     let is_break = ["br>", "br/>", "br />"]
         .iter()
         .any(|b| lower.starts_with(b));
-    let is_autolink = ["http://", "https://", "mailto:"]
-        .iter()
-        .any(|s| lower.starts_with(s));
     !is_break
-        && !is_autolink
+        && !is_external(&lower)
         && after.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/' || c == '!')
 }
 
@@ -349,7 +349,7 @@ pub fn prepare(markdown: &str, cards: &[CardRef]) -> Prepared {
                 }
             }
             None if t.starts_with("$$") => {
-                // A one-line `$$…$$` opens and closes here.
+                // A one-line `$$...$$` opens and closes here.
                 if !t[2..].trim_end().ends_with("$$") || t.trim_end().len() < 4 {
                     fence = Some("$$");
                 }

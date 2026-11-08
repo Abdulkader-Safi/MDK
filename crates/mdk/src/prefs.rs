@@ -160,24 +160,30 @@ pub fn config_dir() -> PathBuf {
 }
 
 impl Prefs {
-    /// Read the config. A missing file gives the defaults. A file that will not parse is
-    /// set aside as `config.broken-<time>.json` and the defaults are used; the second value
-    /// is then the message to show.
+    /// Read the config. A missing file gives the defaults. A file that can't be read or
+    /// parsed is set aside as `config.broken-<time>.json` and the defaults are used; the
+    /// second value is then the message to show.
     pub fn load(dir: &Path) -> (Prefs, Option<String>) {
         let path = dir.join("config.json");
-        let Ok(text) = fs::read_to_string(&path) else {
-            return (Prefs::default(), None);
-        };
-        match serde_json::from_str(&text) {
-            Ok(prefs) => (prefs, None),
-            Err(error) => {
-                let stamp = mdk_format::now_iso().replace(':', "-");
-                let aside = dir.join(format!("config.broken-{stamp}.json"));
-                let _ = fs::rename(&path, &aside);
-                let message = format!("Settings could not be read ({error}). Starting fresh.");
-                (Prefs::default(), Some(message))
+        let parsed = match fs::read_to_string(&path) {
+            Ok(text) => serde_json::from_str(&text).map_err(|e| e.to_string()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                return (Prefs::default(), None);
             }
+            Err(e) => Err(e.to_string()),
+        };
+        let error = match parsed {
+            Ok(prefs) => return (prefs, None),
+            Err(error) => error,
+        };
+        let stamp = mdk_format::now_iso().replace(':', "-");
+        let aside = dir.join(format!("config.broken-{stamp}.json"));
+        let mut message = format!("Settings could not be read ({error}). Starting fresh.");
+        if let Err(e) = fs::rename(&path, &aside) {
+            log::warn!("could not set {} aside: {e}", path.display());
+            message.push_str(&format!(" The old file could not be moved aside ({e})."));
         }
+        (Prefs::default(), Some(message))
     }
 
     pub fn save(&self, dir: &Path) -> std::io::Result<()> {
@@ -263,5 +269,15 @@ mod tests {
             fs::read_to_string(dir.path().join(&names[0])).unwrap(),
             "{ not json"
         );
+    }
+
+    #[test]
+    fn a_config_that_is_not_utf8_is_set_aside_too() {
+        let dir = tempfile::tempdir().unwrap();
+        fs::write(dir.path().join("config.json"), [0xff, 0xfe, b'{']).unwrap();
+        let (prefs, message) = Prefs::load(dir.path());
+        assert_eq!(prefs, Prefs::default());
+        assert!(message.unwrap().starts_with("Settings could not be read"));
+        assert!(!dir.path().join("config.json").exists());
     }
 }

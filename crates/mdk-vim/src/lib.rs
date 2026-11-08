@@ -21,8 +21,9 @@ pub trait VimBuffer {
     fn redo(&mut self);
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Mode {
+    #[default]
     Normal,
     Insert,
     Visual,
@@ -211,7 +212,7 @@ impl Doc {
 
 #[derive(Default)]
 pub struct Vim {
-    mode: ModeState,
+    mode: Mode,
     /// The count being typed. 0 means none.
     count: usize,
     /// A pending operator and the count typed before it.
@@ -228,20 +229,17 @@ pub struct Vim {
     command: Option<String>,
 }
 
-#[derive(Default)]
-struct ModeState(Option<Mode>);
-
 impl Vim {
     pub fn new() -> Vim {
         Vim::default()
     }
 
     pub fn mode(&self) -> Mode {
-        self.mode.0.unwrap_or(Mode::Normal)
+        self.mode
     }
 
     fn set_mode(&mut self, mode: Mode) {
-        self.mode.0 = Some(mode);
+        self.mode = mode;
     }
 
     /// The line to show under the editor: the mode, or the command being typed.
@@ -649,11 +647,12 @@ impl Vim {
                     key.chars().next().unwrap()
                 };
                 self.set_mode(Mode::Normal);
-                if linewise {
-                    self.operate(op, range.start..range.end, Kind::Linewise, &doc, buf);
+                let kind = if linewise {
+                    Kind::Linewise
                 } else {
-                    self.operate(op, range, Kind::Exclusive, &doc, buf);
-                }
+                    Kind::Exclusive
+                };
+                self.operate(op, range, kind, &doc, buf);
             }
             ">" | "<" => {
                 let lines = doc.line_start(range.start)

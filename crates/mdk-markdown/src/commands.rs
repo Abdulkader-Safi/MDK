@@ -33,6 +33,14 @@ fn apply(text: &str, changes: &[Change]) -> String {
     out
 }
 
+/// One replacement of `from..to` with `insert`, and where the selection goes after it.
+fn replace(text: &str, from: usize, to: usize, insert: String, selection: Range<usize>) -> Edit {
+    Edit {
+        text: apply(text, &[Change { from, to, insert }]),
+        selection,
+    }
+}
+
 /// Where a position in the old text ends up. `after` picks the side when text was inserted
 /// right at the position: before the insertion, or after it.
 fn map_pos(pos: usize, changes: &[Change], after: bool) -> usize {
@@ -108,15 +116,12 @@ pub fn wrap(
 ) -> Edit {
     let (from, to) = (selection.start, selection.end);
     let selected = &text[from..to];
-    let one = |from: usize, to: usize, insert: String, selection: Range<usize>| Edit {
-        text: apply(text, &[Change { from, to, insert }]),
-        selection,
-    };
 
     // Marks just outside the selection.
     if from >= before.len() && text[..from].ends_with(before) && text[to..].starts_with(after) {
         let start = from - before.len();
-        return one(
+        return replace(
+            text,
             start,
             to + after.len(),
             selected.to_string(),
@@ -129,7 +134,7 @@ pub fn wrap(
         && selected.ends_with(after)
     {
         let inner = &selected[before.len()..selected.len() - after.len()];
-        return one(from, to, inner.to_string(), from..from + inner.len());
+        return replace(text, from, to, inner.to_string(), from..from + inner.len());
     }
     let inner = if selected.is_empty() {
         placeholder
@@ -137,7 +142,8 @@ pub fn wrap(
         selected
     };
     let start = from + before.len();
-    one(
+    replace(
+        text,
         from,
         to,
         format!("{before}{inner}{after}"),
@@ -173,17 +179,7 @@ pub fn link(text: &str, selection: Range<usize>, image: bool) -> Edit {
         label_at..label_at + label.len()
     };
     let insert = format!("{bang}[{label}]({url})");
-    Edit {
-        text: apply(
-            text,
-            &[Change {
-                from: selection.start,
-                to: selection.end,
-                insert,
-            }],
-        ),
-        selection: select,
-    }
+    replace(text, selection.start, selection.end, insert, select)
 }
 
 /// Make the selected lines a heading of `level`. The same level again removes it.
@@ -271,17 +267,13 @@ pub fn block(text: &str, selection: Range<usize>, block: &str, select: Range<usi
     let post = if next_has_text { "\n" } else { "" };
     let from = if empty { line.start } else { line.end };
     let at = from + pre.len();
-    Edit {
-        text: apply(
-            text,
-            &[Change {
-                from,
-                to: line.end,
-                insert: format!("{pre}{block}{post}"),
-            }],
-        ),
-        selection: at + select.start..at + select.end,
-    }
+    replace(
+        text,
+        from,
+        line.end,
+        format!("{pre}{block}{post}"),
+        at + select.start..at + select.end,
+    )
 }
 
 /// Fence the selected lines, or insert an empty fence.
@@ -359,15 +351,13 @@ pub fn continue_list(text: &str, selection: Range<usize>) -> Option<Edit> {
     }
     if text[line.start + mark_len..line.end].trim().is_empty() {
         // An empty item: take the mark away and leave a plain empty line.
-        let change = Change {
-            from: line.start,
-            to: line.end,
-            insert: String::new(),
-        };
-        return Some(Edit {
-            text: apply(text, &[change]),
-            selection: line.start..line.start,
-        });
+        return Some(replace(
+            text,
+            line.start,
+            line.end,
+            String::new(),
+            line.start..line.start,
+        ));
     }
     let indent = &found[1];
     let mark = if let Some(bullet) = found.get(2) {
@@ -382,13 +372,5 @@ pub fn continue_list(text: &str, selection: Range<usize>) -> Option<Edit> {
     };
     let insert = format!("\n{indent}{mark}");
     let at = cursor + insert.len();
-    let change = Change {
-        from: cursor,
-        to: cursor,
-        insert,
-    };
-    Some(Edit {
-        text: apply(text, &[change]),
-        selection: at..at,
-    })
+    Some(replace(text, cursor, cursor, insert, at..at))
 }

@@ -35,7 +35,7 @@ Rules:
 - `id`: slug + date, unique per project. New files: `<slug>-YYYY-MM-DD.md`.
 - Keep all frontmatter keys when editing. Always refresh `modified` to current UTC ISO time.
 - First `#` heading should match the task title.
-- `order`: number for sorting inside a column. New cards go last (highest + 1).
+- `order`: number for sorting inside a column. New cards go last: any number above the column's highest works. Highest + 1 is simplest; mdk itself uses the current time in milliseconds.
 - You may add your own frontmatter keys (for example `sprint: 4`). mdk keeps them when it saves a card.
 - Keep the frontmatter valid YAML. mdk shows a card with broken frontmatter but will not move it.
 

@@ -121,9 +121,8 @@ pub fn apply(choice: ThemeChoice, window: &mut Window, cx: &mut App) {
     }
 }
 
-/// Badge colours for a priority: (text and outline, background). The badge is an
-/// outline, so the background is clear.
-pub fn priority_colors(priority: Priority, dark: bool) -> (Hsla, Hsla) {
+/// The text and outline colour of a priority badge. The badge has no fill.
+pub fn priority_color(priority: Priority, dark: bool) -> Hsla {
     let text = match (priority, dark) {
         (Priority::Critical, true) => 0xff6b63,
         (Priority::High, true) => 0xffa24a,
@@ -134,8 +133,7 @@ pub fn priority_colors(priority: Priority, dark: bool) -> (Hsla, Hsla) {
         (Priority::Medium, false) => 0x1f55c4,
         (Priority::Low, false) => 0x5f5f66,
     };
-    let text: Hsla = rgb(text).into();
-    (text, text.opacity(0.))
+    rgb(text).into()
 }
 
 /// The column colour of a status.

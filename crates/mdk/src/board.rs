@@ -39,7 +39,7 @@ pub struct Card {
 
 impl Card {
     fn new(project: &str, rel_path: &str, content: Result<String, String>) -> Card {
-        let file_name = rel_path.rsplit('/').next().unwrap_or(rel_path);
+        let file_name = file_name(rel_path);
         let (raw, unreadable) = match content {
             Ok(text) => (text, None),
             Err(why) => (String::new(), Some(why)),
@@ -374,7 +374,12 @@ pub struct NewCard {
     pub labels: Vec<String>,
 }
 
-const BROKEN: &str = "Fix the frontmatter first";
+pub(crate) const BROKEN: &str = "Fix the frontmatter first";
+
+/// The last part of a card's path inside its project: `auth/login.md` gives `login.md`.
+pub(crate) fn file_name(rel_path: &str) -> &str {
+    rel_path.rsplit('/').next().unwrap_or(rel_path)
+}
 
 impl Board {
     // ---- projects ---------------------------------------------------------------------------
@@ -563,6 +568,12 @@ impl Board {
         }
     }
 
+    /// A card's title for an undo label, or empty when the card is gone.
+    fn title_of(&self, key: &CardKey) -> String {
+        self.card(key)
+            .map_or_else(String::new, |c| c.data.title.clone())
+    }
+
     fn record(&mut self, label: impl Into<String>, ops: Vec<FileOp>) {
         if !ops.is_empty() {
             self.undo.push(UndoEntry {
@@ -579,7 +590,7 @@ impl Board {
             return Err(BROKEN.to_string());
         }
         let store = self.store_for(key)?;
-        let file_name = key.rel_path.rsplit('/').next().unwrap_or(&key.rel_path);
+        let file_name = file_name(&key.rel_path);
         let now = mdk_format::now_iso();
         let (before, after) = store
             .update(&key.rel_path, |raw| {
@@ -597,9 +608,7 @@ impl Board {
     /// Change a card's fields. Only the fields the patch names are written.
     pub fn update_card(&mut self, key: &CardKey, patch: &CardPatch) -> Result<(), String> {
         let op = self.patch(key, patch)?;
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         self.record(format!("Edit {title}"), vec![op]);
         Ok(())
     }
@@ -659,7 +668,10 @@ impl Board {
                                 order: Some(new),
                                 ..Default::default()
                             };
-                            ops.push(self.patch(neighbour, &patch)?);
+                            match self.patch(neighbour, &patch) {
+                                Ok(op) => ops.push(op),
+                                Err(error) => return Err(self.roll_back(ops, error)),
+                            }
                         }
                     }
                     (i * 10) as f64 - 5.0
@@ -676,9 +688,26 @@ impl Board {
             order: Some(order),
             ..Default::default()
         };
-        ops.push(self.patch(key, &patch)?);
+        match self.patch(key, &patch) {
+            Ok(op) => ops.push(op),
+            Err(error) => return Err(self.roll_back(ops, error)),
+        }
         self.record(format!("Move to {}", status.name()), ops);
         Ok(true)
+    }
+
+    /// Undo the writes a failed action already made, so it happens whole or not at all.
+    /// Returns `error` for the caller to report.
+    fn roll_back(&mut self, ops: Vec<FileOp>, error: String) -> String {
+        if !ops.is_empty() {
+            let entry = UndoEntry {
+                label: String::new(),
+                ops,
+            };
+            // ponytail: if the rollback itself fails, the files keep the partial change.
+            let _ = self.replay(&entry, true);
+        }
+        error
     }
 
     /// Create a card file in the selected project, or the first one. `workspace` overrides
@@ -708,7 +737,7 @@ impl Board {
         let rel_path = store
             .free_name(&folder, &mdk_format::new_file_name(title, today))
             .map_err(|e| e.to_string())?;
-        let file_name = rel_path.rsplit('/').next().unwrap_or(&rel_path);
+        let file_name = file_name(&rel_path);
         let now = mdk_format::now_iso();
         let body = input.body.trim();
         let card = ParsedCard {
@@ -750,9 +779,7 @@ impl Board {
 
     /// Delete a card file. Its exact text is kept, so the delete can be undone.
     pub fn delete_card(&mut self, key: &CardKey) -> Result<(), String> {
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         let text = self
             .store_for(key)?
             .delete(&key.rel_path)
@@ -781,9 +808,7 @@ impl Board {
             .write(&key.rel_path, text)
             .map_err(|e| e.to_string())?;
         self.reload(key, Some(text));
-        let title = self
-            .card(key)
-            .map_or_else(String::new, |c| c.data.title.clone());
+        let title = self.title_of(key);
         let verb = if before.is_some() { "Edit" } else { "Recreate" };
         self.record(
             format!("{verb} {title}"),
@@ -813,7 +838,7 @@ impl Board {
         for from in self.archivable() {
             let moved = (|| {
                 let store = self.store_for(&from)?;
-                let file_name = from.rel_path.rsplit('/').next().unwrap_or(&from.rel_path);
+                let file_name = file_name(&from.rel_path);
                 let rel_path = store
                     .free_name("archive", file_name)
                     .map_err(|e| e.to_string())?;
@@ -882,6 +907,24 @@ impl Board {
                 Err(error)
             }
         }
+    }
+
+    /// How many actions Undo can take back. Pass it to [`Board::undo_to`] later.
+    pub fn undo_depth(&self) -> usize {
+        self.undo.len()
+    }
+
+    /// Undo every action recorded after `depth`, and forget them: Redo won't bring them back.
+    /// Stops at the first one whose files changed on disk since.
+    pub fn undo_to(&mut self, depth: usize) -> Result<(), String> {
+        while self.undo.len() > depth {
+            let entry = self.undo.pop().expect("the stack is deeper than depth");
+            if let Err(error) = self.replay(&entry, true) {
+                self.undo.push(entry);
+                return Err(error);
+            }
+        }
+        Ok(())
     }
 
     pub fn redo(&mut self) -> Result<Option<String>, String> {

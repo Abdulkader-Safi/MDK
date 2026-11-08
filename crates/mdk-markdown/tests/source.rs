@@ -71,6 +71,21 @@ fn image_paths_resolve_against_the_card_and_never_leave_the_project() {
         resolve_path(PAGE, "50%.png").as_deref(),
         Some("auth/50%.png")
     );
+    // Windows forms: a drive never resolves, backslashes are separators, and a UNC path
+    // stays inside the project like any other.
+    assert_eq!(resolve_path(PAGE, "C:/Users/x/secret.png"), None);
+    assert_eq!(resolve_path(PAGE, "/C:/Users/x/secret.png"), None);
+    assert_eq!(resolve_path("root.md", "C:secret.png"), None);
+    assert_eq!(resolve_path(PAGE, "..\\..\\..\\Users\\x.png"), None);
+    assert_eq!(resolve_path(PAGE, "..%5C..%5Cx.png"), None);
+    assert_eq!(
+        resolve_path(PAGE, "\\\\host\\share\\x.png").as_deref(),
+        Some("host/share/x.png")
+    );
+    assert_eq!(
+        resolve_path(PAGE, "img\\a.png").as_deref(),
+        Some("auth/img/a.png")
+    );
     assert!(is_image("a/B.PNG") && is_image("x.svg") && !is_image("notes.md") && !is_image("png"));
     assert!(
         is_external("https://x.dev")
