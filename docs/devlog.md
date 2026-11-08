@@ -36,7 +36,7 @@ A week of running mdk on real boards gave three fixes: a resizable sidebar and c
 
 ## 2026-10-14 · v0.1.0 · App icon and the first release
 
-The kanban mark in lime on an ink tile. Pushing a version tag now builds the macOS, Windows and Linux files and publishes them as a GitHub release.
+The kanban mark in lime on an ink tile. Pushing a version tag now builds an installer for each desktop platform and publishes them as a GitHub release.
 
 ## 2026-10-12 · A first look, then a redesign
 
@@ -52,7 +52,7 @@ Measured against the Electron app on an M1:
 
 ## 2026-10-11 · Day one: from spec to a working board
 
-Eighteen commits, from four test spikes (file watching, Vim keys, drag and drop, the preview) to a full app with the board, the card editor, Vim mode, the preview, filters and the command palette.
+Eighteen commits, from four test spikes (file watching, Vim keys, drag and drop, the preview) to a full app: the board with filters and a command palette, plus a card editor with Vim mode and a preview.
 
 The card format is tested against 46 cards run through the parser of the Electron app, so both apps write the same bytes.
 
