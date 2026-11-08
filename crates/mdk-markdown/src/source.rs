@@ -6,6 +6,7 @@
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::path::{Path, PathBuf};
 
 /// A wikilink or relative link that leads to a card.
 pub const CARD_SCHEME: &str = "mdk-card:";
@@ -84,6 +85,19 @@ pub fn resolve_path(page_path: &str, href: &str) -> Option<String> {
         }
     }
     (!parts.is_empty()).then(|| parts.join("/"))
+}
+
+/// The image file a link in the card at `page_path` shows: next to the card first, then at
+/// the project root, which is where `![[name.png]]` often means. Only image files, and only
+/// ones that are really inside `root`, so a symlink can't reach outside the project.
+pub fn image_file(root: &Path, page_path: &str, url: &str) -> Option<PathBuf> {
+    let real_root = root.canonicalize().ok()?;
+    let inside = |page: &str| {
+        let file = root.join(resolve_path(page, url).filter(|path| is_image(path))?);
+        let real = file.canonicalize().ok()?;
+        (real.is_file() && real.starts_with(&real_root)).then_some(file)
+    };
+    inside(page_path).or_else(|| inside(""))
 }
 
 /// The card a relative link points at: the path as written, or with `.md` added.

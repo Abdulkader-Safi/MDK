@@ -23,9 +23,6 @@ const SKIP_DIRS: [&str; 4] = ["node_modules", "dist", "out", ".git"];
 const MAX_DEPTH: usize = 4;
 /// Bigger card files are listed but not read (NFR-04).
 pub const MAX_CARD_BYTES: u64 = 1024 * 1024;
-const IMAGE_TYPES: [&str; 9] = [
-    "png", "jpg", "jpeg", "gif", "webp", "avif", "svg", "bmp", "ico",
-];
 
 #[derive(Debug)]
 pub enum StoreError {
@@ -33,8 +30,6 @@ pub enum StoreError {
     /// The path leaves the project folder, by `..`, an absolute path or a symlink.
     OutsideRoot(String),
     NotFound(String),
-    /// Not an image file type.
-    NotAnImage(String),
     /// Refused, with the reason in the message: the card is too large or not UTF-8, a
     /// rename target exists, the caller's change failed, or the folder can't be watched.
     Rejected(String),
@@ -46,7 +41,6 @@ impl std::fmt::Display for StoreError {
             StoreError::Io(e) => write!(f, "{e}"),
             StoreError::OutsideRoot(p) => write!(f, "{p} is outside the project folder"),
             StoreError::NotFound(p) => write!(f, "{p} was not found"),
-            StoreError::NotAnImage(p) => write!(f, "{p} is not an image"),
             StoreError::Rejected(why) => write!(f, "{why}"),
         }
     }
@@ -296,22 +290,6 @@ impl Store {
             n += 1;
         }
         Ok(candidate)
-    }
-
-    /// Image bytes for the preview. Only image file types, only inside the root.
-    pub fn read_image(&self, rel_path: &str) -> Result<Vec<u8>> {
-        let path = self.resolve(rel_path)?;
-        let is_image = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .is_some_and(|e| IMAGE_TYPES.contains(&e.to_lowercase().as_str()));
-        if !is_image {
-            return Err(StoreError::NotAnImage(rel_path.to_string()));
-        }
-        if !path.is_file() {
-            return Err(StoreError::NotFound(rel_path.to_string()));
-        }
-        Ok(fs::read(path)?)
     }
 
     /// Watch the root for changes made by other programs. Events arrive in batches on a

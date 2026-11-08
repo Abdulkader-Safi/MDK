@@ -148,26 +148,6 @@ fn symlinks_out_of_the_root_are_refused_and_not_scanned() {
     assert!(!outside.path().join("new.md").exists());
 }
 
-#[test]
-fn only_image_types_can_be_read_as_images() {
-    let (_dir, store) = project();
-    put(store.root(), "img/pic.PNG", "png bytes");
-    put(store.root(), "card.md", "text");
-    assert_eq!(store.read_image("img/pic.PNG").unwrap(), b"png bytes");
-    assert!(matches!(
-        store.read_image("card.md"),
-        Err(StoreError::NotAnImage(_))
-    ));
-    assert!(matches!(
-        store.read_image("img/gone.png"),
-        Err(StoreError::NotFound(_))
-    ));
-    assert!(matches!(
-        store.read_image("../x.png"),
-        Err(StoreError::OutsideRoot(_))
-    ));
-}
-
 // ---- reading and writing --------------------------------------------------------------------
 
 #[test]
