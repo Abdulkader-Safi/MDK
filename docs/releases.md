@@ -4,6 +4,13 @@ Each release is one `## ` heading: `## <tag> · <date> · <title>`. Everything u
 heading, down to the next `## `, is that release's notes in plain markdown. Write as much
 as you like. The release workflow copies the section for a tag into its GitHub release.
 
+## v0.1.7 · 2026-11-08 · Small fixes from the review
+
+- A card's preview won't show an image that a symlink points to outside your project folder.
+- A work folder named `all` stays selected after a restart. It used to come back as All folders.
+- Locate folder clears the old "folder missing" message once it finds the folder.
+- Settings are saved in a new format. If you go back to an older mdk, it starts with default settings and keeps the newer file next to it.
+
 ## v0.1.6 · 2026-11-08 · Your card files stay as you wrote them
 
 - A comment after a value, like `status: in-progress # waiting`, no longer resets the card to Backlog when it's saved.

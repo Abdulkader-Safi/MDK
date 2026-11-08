@@ -1857,7 +1857,7 @@ dependencies = [
 
 [[package]]
 name = "file-spike"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "notify",
  "notify-debouncer-full",
@@ -4055,7 +4055,7 @@ dependencies = [
 
 [[package]]
 name = "mdk"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "chrono",
  "directories",
@@ -4076,7 +4076,7 @@ dependencies = [
 
 [[package]]
 name = "mdk-format"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "regex",
  "serde-saphyr",
@@ -4085,7 +4085,7 @@ dependencies = [
 
 [[package]]
 name = "mdk-markdown"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "gpui-kit",
  "mermaid-rs-renderer",
@@ -4096,7 +4096,7 @@ dependencies = [
 
 [[package]]
 name = "mdk-store"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "notify",
  "notify-debouncer-full",
@@ -4105,7 +4105,7 @@ dependencies = [
 
 [[package]]
 name = "mdk-vim"
-version = "0.1.6"
+version = "0.1.7"
 
 [[package]]
 name = "memchr"
@@ -7621,7 +7621,7 @@ dependencies = [
 
 [[package]]
 name = "ui-spike"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "gpui-kit",
  "mermaid-rs-renderer",

@@ -4,6 +4,12 @@ Each entry is one `## ` heading: `## <date> · <title>`, or `## <date> · <tags>
 when the work shipped in a release (`v0.1.4`, several tags separated by spaces, or `next`).
 Everything under the heading is plain markdown. Newest first.
 
+## 2026-11-08 · v0.1.7 · Review follow-ups
+
+Three loose ends from the code review. The preview now checks where a symlinked image really lives. A work folder named `all/` no longer collides with "All folders" in the settings file, which took a settings format change. And Locate folder clears its old notice.
+
+The README, the site and every GitHub release now say where macOS 15 hides "Open Anyway": System Settings, Privacy & Security. Apple took it out of the warning popup for apps that aren't notarized.
+
 ## 2026-11-08 · v0.1.6 · A code review
 
 A full review of the source found seven bugs. Five of them could change or delete what you wrote in a card file, all for the same reason: mdk read frontmatter with its own line-by-line parser, and only used a real YAML parser to spot broken files. Valid YAML that the line parser didn't understand got rewritten on the next save. Now the YAML parser reads the values.
