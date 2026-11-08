@@ -693,7 +693,10 @@ impl Mdk {
     pub fn locate_folder(&mut self, id: ProjectId, cx: &mut Context<Self>) {
         self.pick_folder("Locate", cx, move |this, path, cx| {
             match this.board.relocate_project(&id, path) {
-                Ok(()) => this.rescan(&id, cx),
+                Ok(()) => {
+                    this.notice = None;
+                    this.rescan(&id, cx);
+                }
                 Err(error) => this.notice = Some(error),
             }
             this.selection_changed(cx);
