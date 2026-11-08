@@ -35,7 +35,8 @@ pub enum StoreError {
     NotFound(String),
     /// Not an image file type.
     NotAnImage(String),
-    /// The caller's change could not be applied to the file's current content.
+    /// Refused, with the reason in the message: the card is too large or not UTF-8, a
+    /// rename target exists, the caller's change failed, or the folder can't be watched.
     Rejected(String),
 }
 
