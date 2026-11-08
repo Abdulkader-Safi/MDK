@@ -305,3 +305,53 @@ fn excerpts() {
         140
     );
 }
+
+#[test]
+fn custom_keys_with_spaces_dots_or_accents_survive_a_save() {
+    let raw = "---\nid: \"a\"\norder: 1\nstory points: 3\njira.key: ABC-1\npriorité: haute\n---\n# A\n";
+    let patch = CardPatch {
+        status: Some(Status::Done),
+        ..Default::default()
+    };
+    let out = apply_patch(raw, "a.md", &patch, NOW).unwrap();
+    for line in ["story points: 3", "jira.key: ABC-1", "priorité: haute"] {
+        assert!(out.contains(line), "{line} lost:\n{out}");
+    }
+}
+
+#[test]
+fn multi_line_label_lists_are_read_and_kept() {
+    let raw = "---\nid: \"a\"\nlabels: [\n  \"auth\",\n  \"bug\"\n]\n---\n# A\n";
+    assert_eq!(parse(raw, "a.md").labels, ["auth", "bug"]);
+    let patch = CardPatch {
+        status: Some(Status::Done),
+        ..Default::default()
+    };
+    let out = apply_patch(raw, "a.md", &patch, NOW).unwrap();
+    assert!(out.contains("labels: [\"auth\", \"bug\"]"), "{out}");
+}
+
+#[test]
+fn inline_yaml_comments_do_not_change_values() {
+    let raw = "---\nid: \"a\"\nstatus: in-progress  # waiting on API\npriority: high # urgent\norder: 3 # x\n---\n# A\n";
+    let card = parse(raw, "a.md");
+    assert_eq!(card.status, Status::InProgress);
+    assert_eq!(card.priority, Priority::High);
+    assert_eq!(card.order, 3.0);
+}
+
+#[test]
+fn headings_inside_code_fences_are_not_the_title() {
+    let raw = "---\nid: \"setup\"\n---\nSteps:\n\n```sh\n# install deps\nnpm i\n```\n";
+    let card = parse(raw, "setup.md");
+    assert_eq!(card.title, "setup");
+    let patch = CardPatch {
+        title: Some("Set up".into()),
+        ..Default::default()
+    };
+    let out = apply_patch(raw, "setup.md", &patch, NOW).unwrap();
+    assert!(out.contains("```sh\n# install deps\nnpm i\n```"), "{out}");
+    assert!(out.contains("---\n# Set up\n"), "{out}");
+    // A lone `#` does not take the next line as the title.
+    assert_eq!(parse("#\nnot a title\n", "n.md").title, "n");
+}

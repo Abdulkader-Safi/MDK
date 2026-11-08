@@ -5,11 +5,60 @@ use regex::Regex;
 use std::sync::LazyLock;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// Any top-level key YAML allows unquoted: spaces, dots and accents included.
 static KEY_LINE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^([A-Za-z0-9_-]+)\s*:\s*(.*)$").unwrap());
+    LazyLock::new(|| Regex::new(r"^([^\s#:][^:]*?)\s*:\s*(.*)$").unwrap());
 static DASH_LINE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\s*-\s+(.*)$").unwrap());
 static NUMBER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^-?\d+(\.\d+)?$").unwrap());
-static TITLE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?m)^#\s+(.+)$").unwrap());
+static HEADING: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^#[ \t]+(.+)$").unwrap());
+
+/// The first `# ` heading outside fenced code: its byte range in `body` and its text.
+fn title_line(body: &str) -> Option<(std::ops::Range<usize>, &str)> {
+    let mut fence = String::new();
+    let mut start = 0;
+    for line in body.split('\n') {
+        let range = start..start + line.len();
+        start = range.end + 1;
+        if let Some(f) = crate::text::FENCE.captures(line).map(|m| m[1].to_string()) {
+            if fence.is_empty() {
+                fence = f;
+            } else if f.as_bytes()[0] == fence.as_bytes()[0] && f.len() >= fence.len() {
+                fence.clear();
+            }
+            continue;
+        }
+        if fence.is_empty()
+            && let Some(m) = HEADING.captures(line.trim_end_matches('\r'))
+        {
+            return Some((range, m.get(1).unwrap().as_str()));
+        }
+    }
+    None
+}
+
+/// A YAML value in the shape the line parser produces, so both read the same way.
+fn from_yaml(v: serde_json::Value) -> Value {
+    use serde_json::Value as J;
+    let item = |v: J| match v {
+        J::String(s) => s,
+        J::Number(n) => number(n.as_f64().unwrap_or(0.0)),
+        J::Null => String::new(),
+        other => other.to_string(),
+    };
+    match v {
+        J::Null | J::Object(_) => Value::Null,
+        J::Bool(b) => Value::Str(b.to_string()),
+        J::Number(n) => Value::Num(n.as_f64().unwrap_or(0.0)),
+        J::String(s) => Value::Str(s),
+        J::Array(items) => Value::List(
+            items
+                .into_iter()
+                .map(item)
+                .filter(|s| !s.is_empty())
+                .collect(),
+        ),
+    }
+}
 
 /// The nine keys mdk owns, in the order they are written.
 const KNOWN: [&str; 9] = [
@@ -169,7 +218,7 @@ fn front(lines: &[&str]) -> (Vec<(String, Value)>, Vec<RawKey>) {
         let key = KEY_LINE.captures(line);
         let skipped = line.trim().is_empty() || line.trim().starts_with('#');
         match key {
-            Some(kv) if !skipped && !(DASH_LINE.is_match(line) && !data.is_empty()) => {
+            Some(kv) if !skipped && !DASH_LINE.is_match(line) => {
                 flush(&mut data, &mut block);
                 let (name, rest) = (kv[1].to_string(), kv[2].trim());
                 in_extra = !KNOWN.contains(&name.as_str());
@@ -246,14 +295,23 @@ pub fn parse(raw: &str, file_name: &str) -> ParsedCard {
     let text = text.replace("\r\n", "\n");
 
     let (front_lines, body) = split(&text).unwrap_or((Vec::new(), text.clone()));
-    let (data, extra) = front(&front_lines);
-    let get = |key: &str| data.iter().rev().find(|(k, _)| k == key).map(|(_, v)| v);
-    let text_of = |key: &str| get(key).map(Value::text).unwrap_or_default();
-
-    let parse_error = serde_saphyr::from_str::<serde_json::Value>(&front_lines.join("\n"))
+    let (lenient, extra) = front(&front_lines);
+    let yaml = serde_saphyr::from_str::<serde_json::Value>(&front_lines.join("\n"));
+    let parse_error = yaml
+        .as_ref()
         .err()
         .filter(|_| front_lines.iter().any(|l| !l.trim().is_empty()))
         .map(|e| e.to_string());
+    // Valid YAML is read by the YAML parser, so comments, multi-line lists and the like come
+    // out right. The line parser is the fallback for broken files, which are never rewritten.
+    let data = match yaml {
+        Ok(serde_json::Value::Object(map)) => {
+            map.into_iter().map(|(k, v)| (k, from_yaml(v))).collect()
+        }
+        _ => lenient,
+    };
+    let get = |key: &str| data.iter().rev().find(|(k, _)| k == key).map(|(_, v)| v);
+    let text_of = |key: &str| get(key).map(Value::text).unwrap_or_default();
 
     let id = get("id")
         .and_then(Value::as_str)
@@ -266,9 +324,8 @@ pub fn parse(raw: &str, file_name: &str) -> ParsedCard {
                 .to_string()
         });
     let body = body.trim().to_string();
-    let title = TITLE
-        .captures(&body)
-        .map_or(id.as_str(), |m| m.get(1).unwrap().as_str())
+    let title = title_line(&body)
+        .map_or(id.as_str(), |(_, t)| t)
         .trim()
         .to_string();
     let or_now = |s: String| if s.is_empty() { now_iso() } else { s };
@@ -334,7 +391,7 @@ pub fn write(card: &ParsedCard, modified: &str) -> String {
     }
     lines.push("---".to_string());
 
-    let body = if TITLE.is_match(&card.body) {
+    let body = if title_line(&card.body).is_some() {
         card.body.clone()
     } else {
         format!("# {}\n\n{}", card.title, card.body)
@@ -349,8 +406,15 @@ pub fn write(card: &ParsedCard, modified: &str) -> String {
 /// `body` with its first `# ` heading replaced by `title`. A body with no heading is
 /// returned as it is: [`write`] gives it one.
 pub fn set_title(body: &str, title: &str) -> String {
-    let heading = format!("# {}", title.trim());
-    TITLE.replace(body, regex::NoExpand(&heading)).into_owned()
+    match title_line(body) {
+        Some((range, _)) => {
+            let mut out = body.to_string();
+            let end = range.start + body[range.clone()].trim_end_matches('\r').len();
+            out.replace_range(range.start..end, &format!("# {}", title.trim()));
+            out
+        }
+        None => body.to_string(),
+    }
 }
 
 /// The fields a user action can change. `None` leaves the field as it is on disk.

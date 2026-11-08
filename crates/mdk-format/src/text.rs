@@ -6,7 +6,7 @@ use regex::Regex;
 use std::sync::LazyLock;
 
 static NON_SLUG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[^a-z0-9]+").unwrap());
-static FENCE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^ {0,3}(`{3,}|~{3,})").unwrap());
+pub(crate) static FENCE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^ {0,3}(`{3,}|~{3,})").unwrap());
 static SUBTASK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\s*[-*]\s+\[)([ xX])(\]\s*.*)$").unwrap());
 
