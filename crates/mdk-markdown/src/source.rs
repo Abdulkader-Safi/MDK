@@ -2,7 +2,7 @@
 //! markdown the parser knows, resolving links to cards, and reading callout headers.
 //!
 //! Wikilinks and `==highlight==` sit in the middle of text, where a parser plugin cannot
-//! reach them, so they are rewritten into links with an `mdk-…:` scheme before parsing.
+//! reach them, so they are rewritten into links with an `mdk-...:` scheme before parsing.
 
 use std::collections::HashMap;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -200,7 +200,7 @@ pub fn parse_callout(source: &str) -> Option<Callout> {
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Prepared {
     pub source: String,
-    /// `title="…"` from a code fence, keyed by [`code_key`] of the block's code.
+    /// `title="..."` from a code fence, keyed by [`code_key`] of the block's code.
     pub code_titles: HashMap<u64, String>,
 }
 
@@ -243,7 +243,7 @@ fn wikilink(inner: &str, cards: &[CardRef]) -> String {
     }
 }
 
-/// Whether `<…` here is an HTML tag (to show as text), and not `<br>` or an autolink.
+/// Whether `<...` here is an HTML tag (to show as text), and not `<br>` or an autolink.
 fn is_html_tag(rest: &str) -> bool {
     let after = &rest[1..];
     let lower = after.to_lowercase();
@@ -352,7 +352,7 @@ pub fn prepare(markdown: &str, cards: &[CardRef]) -> Prepared {
                 }
             }
             None if t.starts_with("$$") => {
-                // A one-line `$$…$$` opens and closes here.
+                // A one-line `$$...$$` opens and closes here.
                 if !t[2..].trim_end().ends_with("$$") || t.trim_end().len() < 4 {
                     fence = Some("$$");
                 }

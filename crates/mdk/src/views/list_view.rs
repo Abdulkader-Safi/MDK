@@ -71,9 +71,9 @@ impl Mdk {
                     let (due, tone) = data
                         .due_date
                         .as_deref()
-                        .map_or(("—".to_string(), Tone::Muted), |d| format_due(d, today));
+                        .map_or(("-".to_string(), Tone::Muted), |d| format_due(d, today));
                     let assignee = match data.assignee.as_str() {
-                        "" => "—".to_string(),
+                        "" => "-".to_string(),
                         name => format!("@{name}"),
                     };
                     let (open, key) = (this.clone(), key.clone());
