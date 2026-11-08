@@ -39,7 +39,7 @@ pub fn is_external(href: &str) -> bool {
 }
 
 /// `%20` and friends. A stray `%` is left as it is.
-fn percent_decode(s: &str) -> String {
+pub(crate) fn percent_decode(s: &str) -> String {
     let bytes = s.as_bytes();
     let mut out = Vec::with_capacity(bytes.len());
     let mut i = 0;
@@ -250,11 +250,8 @@ fn is_html_tag(rest: &str) -> bool {
     let is_break = ["br>", "br/>", "br />"]
         .iter()
         .any(|b| lower.starts_with(b));
-    let is_autolink = ["http://", "https://", "mailto:"]
-        .iter()
-        .any(|s| lower.starts_with(s));
     !is_break
-        && !is_autolink
+        && !is_external(&lower)
         && after.starts_with(|c: char| c.is_ascii_alphabetic() || c == '/' || c == '!')
 }
 

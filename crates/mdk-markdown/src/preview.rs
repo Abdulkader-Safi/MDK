@@ -5,7 +5,7 @@
 
 use crate::source::{
     CARD_SCHEME, Callout, CardRef, HIGHLIGHT_SCHEME, MISSING_SCHEME, Tone, code_key, dollar_guard,
-    find_link, is_external, is_image, parse_callout, prepare, resolve_path,
+    find_link, is_external, is_image, parse_callout, percent_decode, prepare, resolve_path,
 };
 use gpui_kit::component::ActiveTheme;
 use gpui_kit::component::text::{
@@ -537,15 +537,7 @@ fn build(
         })
         .on_link_click(move |url, _, window, cx| {
             if let Some(path) = url.strip_prefix(CARD_SCHEME) {
-                link_open(
-                    &path
-                        .replace("%20", " ")
-                        .replace("%28", "(")
-                        .replace("%29", ")")
-                        .replace("%25", "%"),
-                    window,
-                    cx,
-                );
+                link_open(&percent_decode(path), window, cx);
             } else if is_external(url) {
                 // The only links that leave the app, and only through the OS.
                 cx.open_url(url);
