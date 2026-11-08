@@ -392,14 +392,13 @@ fn the_keyboard_moves_a_card_and_escape_puts_it_back(cx: &mut TestAppContext) {
     // Escape cancels the whole move.
     press(cx, &f, &["escape"]);
     assert_eq!(column(cx, &f, Status::Todo), ["Fix login", "Fix logout"]);
-    let restored = read(&f, "backend/login.md");
-    assert!(restored.contains("status: \"todo\"\n") && restored.contains("order: 1\n"));
-    // Everything after the frontmatter is as it was.
-    assert_eq!(
-        restored.split("---\n").last(),
-        original.split("---\n").last()
-    );
-    cx.update(|cx| assert!(f.view.read(cx).grabbed.is_none()));
+    // The file is back byte for byte, and the moves made while holding it are not undoable.
+    assert_eq!(read(&f, "backend/login.md"), original);
+    cx.update(|cx| {
+        let view = f.view.read(cx);
+        assert!(view.grabbed.is_none());
+        assert!(!view.board.can_undo());
+    });
 
     // Space, Right, Space drops it for good.
     press(cx, &f, &["space", "right", "space"]);

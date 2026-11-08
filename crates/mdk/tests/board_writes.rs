@@ -517,3 +517,48 @@ fn a_broken_file_is_fixed_by_writing_its_raw_text() {
     fx.board.write_raw(&key, fixed).unwrap();
     assert_eq!(fx.read("broken.md"), fixed);
 }
+
+#[test]
+fn a_renumber_that_hits_a_broken_card_changes_nothing() {
+    let broken = "---\nstatus: todo\norder: 0\nbad: [x\n---\n# Broken\n";
+    let mut fx = Fx::new(&[
+        ("x.md", card("backlog", 1.0)),
+        ("t1.md", card("todo", 0.0)),
+        ("t2.md", card("todo", 0.0)),
+        ("z.md", broken.into()),
+    ]);
+    assert_eq!(fx.column(Status::Todo), ["t1.md", "t2.md", "z.md"]);
+    assert!(
+        fx.board
+            .move_card(&fx.key("x.md"), Status::Todo, Some(1))
+            .is_err()
+    );
+    for rel in ["t1.md", "t2.md"] {
+        assert_eq!(fx.read(rel), card("todo", 0.0), "{rel} was left rewritten");
+    }
+    assert_eq!(fx.read("x.md"), card("backlog", 1.0));
+    assert_eq!(fx.read("z.md"), broken);
+    assert!(!fx.board.can_undo());
+}
+
+#[test]
+fn undo_to_reverts_every_action_since_a_point_and_forgets_them() {
+    let mut fx = Fx::new(&[
+        ("t1.md", card("todo", 5.0)),
+        ("t2.md", card("todo", 5.0)),
+        ("t3.md", card("todo", 5.0)),
+    ]);
+    let depth = fx.board.undo_depth();
+    fx.board
+        .move_card(&fx.key("t3.md"), Status::Todo, Some(1))
+        .unwrap();
+    fx.board
+        .move_card(&fx.key("t3.md"), Status::Done, None)
+        .unwrap();
+    fx.board.undo_to(depth).unwrap();
+    for rel in ["t1.md", "t2.md", "t3.md"] {
+        assert_eq!(fx.read(rel), card("todo", 5.0), "{rel}");
+    }
+    assert_eq!(fx.column(Status::Todo), ["t1.md", "t2.md", "t3.md"]);
+    assert!(!fx.board.can_undo());
+}

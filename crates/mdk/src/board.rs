@@ -659,7 +659,10 @@ impl Board {
                                 order: Some(new),
                                 ..Default::default()
                             };
-                            ops.push(self.patch(neighbour, &patch)?);
+                            match self.patch(neighbour, &patch) {
+                                Ok(op) => ops.push(op),
+                                Err(error) => return Err(self.roll_back(ops, error)),
+                            }
                         }
                     }
                     (i * 10) as f64 - 5.0
@@ -676,9 +679,26 @@ impl Board {
             order: Some(order),
             ..Default::default()
         };
-        ops.push(self.patch(key, &patch)?);
+        match self.patch(key, &patch) {
+            Ok(op) => ops.push(op),
+            Err(error) => return Err(self.roll_back(ops, error)),
+        }
         self.record(format!("Move to {}", status.name()), ops);
         Ok(true)
+    }
+
+    /// Undo the writes a failed action already made, so it happens whole or not at all.
+    /// Returns `error` for the caller to report.
+    fn roll_back(&mut self, ops: Vec<FileOp>, error: String) -> String {
+        if !ops.is_empty() {
+            let entry = UndoEntry {
+                label: String::new(),
+                ops,
+            };
+            // ponytail: if the rollback itself fails, the files keep the partial change.
+            let _ = self.replay(&entry, true);
+        }
+        error
     }
 
     /// Create a card file in the selected project, or the first one. `workspace` overrides
@@ -882,6 +902,24 @@ impl Board {
                 Err(error)
             }
         }
+    }
+
+    /// How many actions Undo can take back. Pass it to [`Board::undo_to`] later.
+    pub fn undo_depth(&self) -> usize {
+        self.undo.len()
+    }
+
+    /// Undo every action recorded after `depth`, and forget them: Redo won't bring them back.
+    /// Stops at the first one whose files changed on disk since.
+    pub fn undo_to(&mut self, depth: usize) -> Result<(), String> {
+        while self.undo.len() > depth {
+            let entry = self.undo.pop().expect("the stack is deeper than depth");
+            if let Err(error) = self.replay(&entry, true) {
+                self.undo.push(entry);
+                return Err(error);
+            }
+        }
+        Ok(())
     }
 
     pub fn redo(&mut self) -> Result<Option<String>, String> {

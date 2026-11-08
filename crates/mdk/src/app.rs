@@ -234,6 +234,8 @@ pub struct Grabbed {
     pub key: CardKey,
     status: Status,
     order: f64,
+    /// The undo depth at pick-up. Escape undoes every move made since, neighbours included.
+    undo_depth: usize,
 }
 
 /// The payload of a drag on a panel edge. Nothing follows the pointer.
@@ -1118,6 +1120,7 @@ impl Mdk {
                     key: card.key.clone(),
                     status: card.data.status,
                     order: card.data.order,
+                    undo_depth: self.board.undo_depth(),
                 });
             }
         }
@@ -1129,6 +1132,13 @@ impl Mdk {
         let Some(grabbed) = self.grabbed.take() else {
             return;
         };
+        if self.board.undo_to(grabbed.undo_depth).is_ok() {
+            self.changed(cx);
+            self.toast = None;
+            cx.notify();
+            return;
+        }
+        // A file changed on disk since: put back at least the card itself.
         let moved = self
             .board
             .card(&grabbed.key)
