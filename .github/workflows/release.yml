@@ -48,6 +48,15 @@ jobs:
           awk -v tag="${GITHUB_REF_NAME}" '
             /^## / { on = (index($0, "## " tag " ") == 1); next }
             on' docs/releases.md > release-notes.md
+          cat >> release-notes.md <<'EOF'
+
+          ### First launch
+
+          The builds are not code-signed yet.
+
+          - macOS says it "could not verify" mdk. Click Done, then open System Settings, Privacy & Security, scroll down and click "Open Anyway". You do this for the `.dmg` and again the first time mdk starts. Or run `xattr -dr com.apple.quarantine /Applications/mdk.app` once.
+          - Windows SmartScreen says it protected your PC. Click "More info", then "Run anyway".
+          EOF
       - uses: softprops/action-gh-release@v3
         with:
           files: ${{ matrix.artifact }}

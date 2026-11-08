@@ -18,7 +18,7 @@ Download the file for your system from the [latest release](https://github.com/A
 
 The builds are not code-signed yet, so the first launch needs one extra click:
 
-- macOS blocks the first launch. Open System Settings, Privacy & Security, scroll down and click "Open Anyway" next to mdk. Or run `xattr -dr com.apple.quarantine /Applications/mdk.app` once.
+- macOS says it "could not verify" the `.dmg`. Click Done, then open System Settings, Privacy & Security, scroll down and click "Open Anyway" next to mdk. It asks once more when mdk first starts: same steps. Or skip both by running `xattr -dr com.apple.quarantine /Applications/mdk.app` once after you drag mdk to Applications.
 - Windows SmartScreen says it protected your PC. Click "More info", then "Run anyway".
 
 ## First steps
